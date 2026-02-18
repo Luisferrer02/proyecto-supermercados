@@ -1,0 +1,601 @@
+day,product_id,name,category,shelf_id,rack_level,units_sold,revenue,profit
+1,1,Whole Milk 1L,dairy,S1,3,19,22.8,3.42
+1,2,Greek Yogurt,dairy,S1,2,13,32.5,9.75
+1,3,Cheddar Cheese,dairy,S1,1,7,26.6,6.65
+1,4,White Bread,bakery,S2,3,19,19.0,3.8
+1,5,Croissants x4,bakery,S2,2,8,17.6,6.16
+1,6,Baguette,bakery,S2,4,6,9.0,2.25
+1,7,Coca-Cola 2L,beverages,S3,3,15,27.0,5.4
+1,8,Orange Juice 1L,beverages,S3,2,12,30.0,6.6
+1,9,Sparkling Water 1.5L,beverages,S3,1,6,5.4,0.97
+1,10,Spaghetti 500g,pasta,S4,3,18,19.8,5.54
+1,11,Penne 500g,pasta,S4,2,8,8.8,2.46
+1,12,Tomato Sauce 400g,pasta,S4,1,9,14.4,4.61
+1,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+1,14,Chicken Breast 500g,meat,S5,3,14,70.0,12.6
+1,15,Ground Beef 400g,meat,S5,2,10,42.0,6.72
+1,16,Salmon Fillet 300g,meat,S5,1,4,26.0,5.72
+1,17,Bananas 1kg,produce,S6,3,18,23.4,5.85
+1,18,Apples 1kg,produce,S6,2,12,24.0,5.28
+1,19,Tomatoes 500g,produce,S6,4,9,16.2,3.24
+1,20,Potato Chips 150g,snacks,S7,3,13,36.4,14.56
+2,1,Whole Milk 1L,dairy,S1,3,20,24.0,3.6
+2,2,Greek Yogurt,dairy,S1,2,10,25.0,7.5
+2,3,Cheddar Cheese,dairy,S1,1,6,22.8,5.7
+2,4,White Bread,bakery,S2,3,18,18.0,3.6
+2,5,Croissants x4,bakery,S2,2,9,19.8,6.93
+2,6,Baguette,bakery,S2,4,8,12.0,3.0
+2,7,Coca-Cola 2L,beverages,S3,3,16,28.8,5.76
+2,8,Orange Juice 1L,beverages,S3,2,11,27.5,6.05
+2,9,Sparkling Water 1.5L,beverages,S3,1,6,5.4,0.97
+2,10,Spaghetti 500g,pasta,S4,3,14,15.4,4.31
+2,11,Penne 500g,pasta,S4,2,10,11.0,3.08
+2,12,Tomato Sauce 400g,pasta,S4,1,7,11.2,3.58
+2,13,Olive Oil 500ml,condiments,S4,4,6,27.0,5.4
+2,14,Chicken Breast 500g,meat,S5,3,18,90.0,16.2
+2,15,Ground Beef 400g,meat,S5,2,13,54.6,8.74
+2,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+2,17,Bananas 1kg,produce,S6,3,18,23.4,5.85
+2,18,Apples 1kg,produce,S6,2,11,22.0,4.84
+2,19,Tomatoes 500g,produce,S6,4,10,18.0,3.6
+2,20,Potato Chips 150g,snacks,S7,3,14,39.2,15.68
+3,1,Whole Milk 1L,dairy,S1,3,18,21.6,3.24
+3,2,Greek Yogurt,dairy,S1,2,12,30.0,9.0
+3,3,Cheddar Cheese,dairy,S1,1,6,22.8,5.7
+3,4,White Bread,bakery,S2,3,21,21.0,4.2
+3,5,Croissants x4,bakery,S2,2,8,17.6,6.16
+3,6,Baguette,bakery,S2,4,7,10.5,2.62
+3,7,Coca-Cola 2L,beverages,S3,3,17,30.6,6.12
+3,8,Orange Juice 1L,beverages,S3,2,11,27.5,6.05
+3,9,Sparkling Water 1.5L,beverages,S3,1,6,5.4,0.97
+3,10,Spaghetti 500g,pasta,S4,3,15,16.5,4.62
+3,11,Penne 500g,pasta,S4,2,11,12.1,3.39
+3,12,Tomato Sauce 400g,pasta,S4,1,8,12.8,4.1
+3,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+3,14,Chicken Breast 500g,meat,S5,3,18,90.0,16.2
+3,15,Ground Beef 400g,meat,S5,2,12,50.4,8.06
+3,16,Salmon Fillet 300g,meat,S5,1,6,39.0,8.58
+3,17,Bananas 1kg,produce,S6,3,17,22.1,5.53
+3,18,Apples 1kg,produce,S6,2,11,22.0,4.84
+3,19,Tomatoes 500g,produce,S6,4,8,14.4,2.88
+3,20,Potato Chips 150g,snacks,S7,3,13,36.4,14.56
+4,1,Whole Milk 1L,dairy,S1,3,19,22.8,3.42
+4,2,Greek Yogurt,dairy,S1,2,11,27.5,8.25
+4,3,Cheddar Cheese,dairy,S1,1,7,26.6,6.65
+4,4,White Bread,bakery,S2,3,18,18.0,3.6
+4,5,Croissants x4,bakery,S2,2,8,17.6,6.16
+4,6,Baguette,bakery,S2,4,7,10.5,2.62
+4,7,Coca-Cola 2L,beverages,S3,3,16,28.8,5.76
+4,8,Orange Juice 1L,beverages,S3,2,12,30.0,6.6
+4,9,Sparkling Water 1.5L,beverages,S3,1,5,4.5,0.81
+4,10,Spaghetti 500g,pasta,S4,3,19,20.9,5.85
+4,11,Penne 500g,pasta,S4,2,11,12.1,3.39
+4,12,Tomato Sauce 400g,pasta,S4,1,7,11.2,3.58
+4,13,Olive Oil 500ml,condiments,S4,4,6,27.0,5.4
+4,14,Chicken Breast 500g,meat,S5,3,17,85.0,15.3
+4,15,Ground Beef 400g,meat,S5,2,12,50.4,8.06
+4,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+4,17,Bananas 1kg,produce,S6,3,21,27.3,6.83
+4,18,Apples 1kg,produce,S6,2,11,22.0,4.84
+4,19,Tomatoes 500g,produce,S6,4,9,16.2,3.24
+4,20,Potato Chips 150g,snacks,S7,3,12,33.6,13.44
+5,1,Whole Milk 1L,dairy,S1,3,22,26.4,3.96
+5,2,Greek Yogurt,dairy,S1,2,12,30.0,9.0
+5,3,Cheddar Cheese,dairy,S1,1,6,22.8,5.7
+5,4,White Bread,bakery,S2,3,16,16.0,3.2
+5,5,Croissants x4,bakery,S2,2,9,19.8,6.93
+5,6,Baguette,bakery,S2,4,7,10.5,2.62
+5,7,Coca-Cola 2L,beverages,S3,3,19,34.2,6.84
+5,8,Orange Juice 1L,beverages,S3,2,11,27.5,6.05
+5,9,Sparkling Water 1.5L,beverages,S3,1,7,6.3,1.13
+5,10,Spaghetti 500g,pasta,S4,3,16,17.6,4.93
+5,11,Penne 500g,pasta,S4,2,9,9.9,2.77
+5,12,Tomato Sauce 400g,pasta,S4,1,8,12.8,4.1
+5,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+5,14,Chicken Breast 500g,meat,S5,3,16,80.0,14.4
+5,15,Ground Beef 400g,meat,S5,2,12,50.4,8.06
+5,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+5,17,Bananas 1kg,produce,S6,3,19,24.7,6.17
+5,18,Apples 1kg,produce,S6,2,12,24.0,5.28
+5,19,Tomatoes 500g,produce,S6,4,8,14.4,2.88
+5,20,Potato Chips 150g,snacks,S7,3,12,33.6,13.44
+6,1,Whole Milk 1L,dairy,S1,3,17,20.4,3.06
+6,2,Greek Yogurt,dairy,S1,2,12,30.0,9.0
+6,3,Cheddar Cheese,dairy,S1,1,6,22.8,5.7
+6,4,White Bread,bakery,S2,3,19,19.0,3.8
+6,5,Croissants x4,bakery,S2,2,10,22.0,7.7
+6,6,Baguette,bakery,S2,4,7,10.5,2.62
+6,7,Coca-Cola 2L,beverages,S3,3,17,30.6,6.12
+6,8,Orange Juice 1L,beverages,S3,2,12,30.0,6.6
+6,9,Sparkling Water 1.5L,beverages,S3,1,6,5.4,0.97
+6,10,Spaghetti 500g,pasta,S4,3,14,15.4,4.31
+6,11,Penne 500g,pasta,S4,2,9,9.9,2.77
+6,12,Tomato Sauce 400g,pasta,S4,1,7,11.2,3.58
+6,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+6,14,Chicken Breast 500g,meat,S5,3,17,85.0,15.3
+6,15,Ground Beef 400g,meat,S5,2,12,50.4,8.06
+6,16,Salmon Fillet 300g,meat,S5,1,6,39.0,8.58
+6,17,Bananas 1kg,produce,S6,3,21,27.3,6.83
+6,18,Apples 1kg,produce,S6,2,11,22.0,4.84
+6,19,Tomatoes 500g,produce,S6,4,10,18.0,3.6
+6,20,Potato Chips 150g,snacks,S7,3,14,39.2,15.68
+7,1,Whole Milk 1L,dairy,S1,3,22,26.4,3.96
+7,2,Greek Yogurt,dairy,S1,2,13,32.5,9.75
+7,3,Cheddar Cheese,dairy,S1,1,6,22.8,5.7
+7,4,White Bread,bakery,S2,3,17,17.0,3.4
+7,5,Croissants x4,bakery,S2,2,8,17.6,6.16
+7,6,Baguette,bakery,S2,4,7,10.5,2.62
+7,7,Coca-Cola 2L,beverages,S3,3,19,34.2,6.84
+7,8,Orange Juice 1L,beverages,S3,2,12,30.0,6.6
+7,9,Sparkling Water 1.5L,beverages,S3,1,5,4.5,0.81
+7,10,Spaghetti 500g,pasta,S4,3,17,18.7,5.24
+7,11,Penne 500g,pasta,S4,2,10,11.0,3.08
+7,12,Tomato Sauce 400g,pasta,S4,1,7,11.2,3.58
+7,13,Olive Oil 500ml,condiments,S4,4,6,27.0,5.4
+7,14,Chicken Breast 500g,meat,S5,3,15,75.0,13.5
+7,15,Ground Beef 400g,meat,S5,2,13,54.6,8.74
+7,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+7,17,Bananas 1kg,produce,S6,3,19,24.7,6.17
+7,18,Apples 1kg,produce,S6,2,13,26.0,5.72
+7,19,Tomatoes 500g,produce,S6,4,9,16.2,3.24
+7,20,Potato Chips 150g,snacks,S7,3,16,44.8,17.92
+8,1,Whole Milk 1L,dairy,S1,3,23,27.6,4.14
+8,2,Greek Yogurt,dairy,S1,2,11,27.5,8.25
+8,3,Cheddar Cheese,dairy,S1,1,7,26.6,6.65
+8,4,White Bread,bakery,S2,3,18,18.0,3.6
+8,5,Croissants x4,bakery,S2,2,8,17.6,6.16
+8,6,Baguette,bakery,S2,4,6,9.0,2.25
+8,7,Coca-Cola 2L,beverages,S3,3,18,32.4,6.48
+8,8,Orange Juice 1L,beverages,S3,2,11,27.5,6.05
+8,9,Sparkling Water 1.5L,beverages,S3,1,5,4.5,0.81
+8,10,Spaghetti 500g,pasta,S4,3,15,16.5,4.62
+8,11,Penne 500g,pasta,S4,2,11,12.1,3.39
+8,12,Tomato Sauce 400g,pasta,S4,1,7,11.2,3.58
+8,13,Olive Oil 500ml,condiments,S4,4,6,27.0,5.4
+8,14,Chicken Breast 500g,meat,S5,3,16,80.0,14.4
+8,15,Ground Beef 400g,meat,S5,2,13,54.6,8.74
+8,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+8,17,Bananas 1kg,produce,S6,3,20,26.0,6.5
+8,18,Apples 1kg,produce,S6,2,13,26.0,5.72
+8,19,Tomatoes 500g,produce,S6,4,9,16.2,3.24
+8,20,Potato Chips 150g,snacks,S7,3,15,42.0,16.8
+9,1,Whole Milk 1L,dairy,S1,3,19,22.8,3.42
+9,2,Greek Yogurt,dairy,S1,2,12,30.0,9.0
+9,3,Cheddar Cheese,dairy,S1,1,7,26.6,6.65
+9,4,White Bread,bakery,S2,3,19,19.0,3.8
+9,5,Croissants x4,bakery,S2,2,8,17.6,6.16
+9,6,Baguette,bakery,S2,4,8,12.0,3.0
+9,7,Coca-Cola 2L,beverages,S3,3,17,30.6,6.12
+9,8,Orange Juice 1L,beverages,S3,2,10,25.0,5.5
+9,9,Sparkling Water 1.5L,beverages,S3,1,5,4.5,0.81
+9,10,Spaghetti 500g,pasta,S4,3,17,18.7,5.24
+9,11,Penne 500g,pasta,S4,2,10,11.0,3.08
+9,12,Tomato Sauce 400g,pasta,S4,1,7,11.2,3.58
+9,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+9,14,Chicken Breast 500g,meat,S5,3,15,75.0,13.5
+9,15,Ground Beef 400g,meat,S5,2,12,50.4,8.06
+9,16,Salmon Fillet 300g,meat,S5,1,4,26.0,5.72
+9,17,Bananas 1kg,produce,S6,3,20,26.0,6.5
+9,18,Apples 1kg,produce,S6,2,12,24.0,5.28
+9,19,Tomatoes 500g,produce,S6,4,11,19.8,3.96
+9,20,Potato Chips 150g,snacks,S7,3,12,33.6,13.44
+10,1,Whole Milk 1L,dairy,S1,3,19,22.8,3.42
+10,2,Greek Yogurt,dairy,S1,2,10,25.0,7.5
+10,3,Cheddar Cheese,dairy,S1,1,7,26.6,6.65
+10,4,White Bread,bakery,S2,3,21,21.0,4.2
+10,5,Croissants x4,bakery,S2,2,8,17.6,6.16
+10,6,Baguette,bakery,S2,4,7,10.5,2.62
+10,7,Coca-Cola 2L,beverages,S3,3,19,34.2,6.84
+10,8,Orange Juice 1L,beverages,S3,2,11,27.5,6.05
+10,9,Sparkling Water 1.5L,beverages,S3,1,6,5.4,0.97
+10,10,Spaghetti 500g,pasta,S4,3,15,16.5,4.62
+10,11,Penne 500g,pasta,S4,2,9,9.9,2.77
+10,12,Tomato Sauce 400g,pasta,S4,1,9,14.4,4.61
+10,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+10,14,Chicken Breast 500g,meat,S5,3,16,80.0,14.4
+10,15,Ground Beef 400g,meat,S5,2,11,46.2,7.39
+10,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+10,17,Bananas 1kg,produce,S6,3,21,27.3,6.83
+10,18,Apples 1kg,produce,S6,2,14,28.0,6.16
+10,19,Tomatoes 500g,produce,S6,4,10,18.0,3.6
+10,20,Potato Chips 150g,snacks,S7,3,15,42.0,16.8
+11,1,Whole Milk 1L,dairy,S1,3,21,25.2,3.78
+11,2,Greek Yogurt,dairy,S1,2,10,25.0,7.5
+11,3,Cheddar Cheese,dairy,S1,1,6,22.8,5.7
+11,4,White Bread,bakery,S2,3,21,21.0,4.2
+11,5,Croissants x4,bakery,S2,2,9,19.8,6.93
+11,6,Baguette,bakery,S2,4,6,9.0,2.25
+11,7,Coca-Cola 2L,beverages,S3,3,15,27.0,5.4
+11,8,Orange Juice 1L,beverages,S3,2,11,27.5,6.05
+11,9,Sparkling Water 1.5L,beverages,S3,1,5,4.5,0.81
+11,10,Spaghetti 500g,pasta,S4,3,15,16.5,4.62
+11,11,Penne 500g,pasta,S4,2,10,11.0,3.08
+11,12,Tomato Sauce 400g,pasta,S4,1,8,12.8,4.1
+11,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+11,14,Chicken Breast 500g,meat,S5,3,15,75.0,13.5
+11,15,Ground Beef 400g,meat,S5,2,12,50.4,8.06
+11,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+11,17,Bananas 1kg,produce,S6,3,18,23.4,5.85
+11,18,Apples 1kg,produce,S6,2,13,26.0,5.72
+11,19,Tomatoes 500g,produce,S6,4,10,18.0,3.6
+11,20,Potato Chips 150g,snacks,S7,3,15,42.0,16.8
+12,1,Whole Milk 1L,dairy,S1,3,21,25.2,3.78
+12,2,Greek Yogurt,dairy,S1,2,12,30.0,9.0
+12,3,Cheddar Cheese,dairy,S1,1,6,22.8,5.7
+12,4,White Bread,bakery,S2,3,18,18.0,3.6
+12,5,Croissants x4,bakery,S2,2,8,17.6,6.16
+12,6,Baguette,bakery,S2,4,7,10.5,2.62
+12,7,Coca-Cola 2L,beverages,S3,3,20,36.0,7.2
+12,8,Orange Juice 1L,beverages,S3,2,10,25.0,5.5
+12,9,Sparkling Water 1.5L,beverages,S3,1,7,6.3,1.13
+12,10,Spaghetti 500g,pasta,S4,3,17,18.7,5.24
+12,11,Penne 500g,pasta,S4,2,11,12.1,3.39
+12,12,Tomato Sauce 400g,pasta,S4,1,8,12.8,4.1
+12,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+12,14,Chicken Breast 500g,meat,S5,3,16,80.0,14.4
+12,15,Ground Beef 400g,meat,S5,2,10,42.0,6.72
+12,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+12,17,Bananas 1kg,produce,S6,3,18,23.4,5.85
+12,18,Apples 1kg,produce,S6,2,11,22.0,4.84
+12,19,Tomatoes 500g,produce,S6,4,10,18.0,3.6
+12,20,Potato Chips 150g,snacks,S7,3,13,36.4,14.56
+13,1,Whole Milk 1L,dairy,S1,3,22,26.4,3.96
+13,2,Greek Yogurt,dairy,S1,2,13,32.5,9.75
+13,3,Cheddar Cheese,dairy,S1,1,7,26.6,6.65
+13,4,White Bread,bakery,S2,3,18,18.0,3.6
+13,5,Croissants x4,bakery,S2,2,8,17.6,6.16
+13,6,Baguette,bakery,S2,4,8,12.0,3.0
+13,7,Coca-Cola 2L,beverages,S3,3,17,30.6,6.12
+13,8,Orange Juice 1L,beverages,S3,2,12,30.0,6.6
+13,9,Sparkling Water 1.5L,beverages,S3,1,7,6.3,1.13
+13,10,Spaghetti 500g,pasta,S4,3,18,19.8,5.54
+13,11,Penne 500g,pasta,S4,2,9,9.9,2.77
+13,12,Tomato Sauce 400g,pasta,S4,1,7,11.2,3.58
+13,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+13,14,Chicken Breast 500g,meat,S5,3,15,75.0,13.5
+13,15,Ground Beef 400g,meat,S5,2,10,42.0,6.72
+13,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+13,17,Bananas 1kg,produce,S6,3,22,28.6,7.15
+13,18,Apples 1kg,produce,S6,2,13,26.0,5.72
+13,19,Tomatoes 500g,produce,S6,4,9,16.2,3.24
+13,20,Potato Chips 150g,snacks,S7,3,12,33.6,13.44
+14,1,Whole Milk 1L,dairy,S1,3,20,24.0,3.6
+14,2,Greek Yogurt,dairy,S1,2,13,32.5,9.75
+14,3,Cheddar Cheese,dairy,S1,1,6,22.8,5.7
+14,4,White Bread,bakery,S2,3,19,19.0,3.8
+14,5,Croissants x4,bakery,S2,2,10,22.0,7.7
+14,6,Baguette,bakery,S2,4,8,12.0,3.0
+14,7,Coca-Cola 2L,beverages,S3,3,19,34.2,6.84
+14,8,Orange Juice 1L,beverages,S3,2,11,27.5,6.05
+14,9,Sparkling Water 1.5L,beverages,S3,1,6,5.4,0.97
+14,10,Spaghetti 500g,pasta,S4,3,15,16.5,4.62
+14,11,Penne 500g,pasta,S4,2,11,12.1,3.39
+14,12,Tomato Sauce 400g,pasta,S4,1,8,12.8,4.1
+14,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+14,14,Chicken Breast 500g,meat,S5,3,18,90.0,16.2
+14,15,Ground Beef 400g,meat,S5,2,11,46.2,7.39
+14,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+14,17,Bananas 1kg,produce,S6,3,21,27.3,6.83
+14,18,Apples 1kg,produce,S6,2,13,26.0,5.72
+14,19,Tomatoes 500g,produce,S6,4,10,18.0,3.6
+14,20,Potato Chips 150g,snacks,S7,3,15,42.0,16.8
+15,1,Whole Milk 1L,dairy,S1,3,22,26.4,3.96
+15,2,Greek Yogurt,dairy,S1,2,11,27.5,8.25
+15,3,Cheddar Cheese,dairy,S1,1,6,22.8,5.7
+15,4,White Bread,bakery,S2,3,16,16.0,3.2
+15,5,Croissants x4,bakery,S2,2,9,19.8,6.93
+15,6,Baguette,bakery,S2,4,6,9.0,2.25
+15,7,Coca-Cola 2L,beverages,S3,3,17,30.6,6.12
+15,8,Orange Juice 1L,beverages,S3,2,11,27.5,6.05
+15,9,Sparkling Water 1.5L,beverages,S3,1,6,5.4,0.97
+15,10,Spaghetti 500g,pasta,S4,3,17,18.7,5.24
+15,11,Penne 500g,pasta,S4,2,9,9.9,2.77
+15,12,Tomato Sauce 400g,pasta,S4,1,7,11.2,3.58
+15,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+15,14,Chicken Breast 500g,meat,S5,3,15,75.0,13.5
+15,15,Ground Beef 400g,meat,S5,2,10,42.0,6.72
+15,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+15,17,Bananas 1kg,produce,S6,3,21,27.3,6.83
+15,18,Apples 1kg,produce,S6,2,11,22.0,4.84
+15,19,Tomatoes 500g,produce,S6,4,10,18.0,3.6
+15,20,Potato Chips 150g,snacks,S7,3,12,33.6,13.44
+16,1,Whole Milk 1L,dairy,S1,3,17,20.4,3.06
+16,2,Greek Yogurt,dairy,S1,2,12,30.0,9.0
+16,3,Cheddar Cheese,dairy,S1,1,7,26.6,6.65
+16,4,White Bread,bakery,S2,3,19,19.0,3.8
+16,5,Croissants x4,bakery,S2,2,10,22.0,7.7
+16,6,Baguette,bakery,S2,4,8,12.0,3.0
+16,7,Coca-Cola 2L,beverages,S3,3,18,32.4,6.48
+16,8,Orange Juice 1L,beverages,S3,2,10,25.0,5.5
+16,9,Sparkling Water 1.5L,beverages,S3,1,7,6.3,1.13
+16,10,Spaghetti 500g,pasta,S4,3,15,16.5,4.62
+16,11,Penne 500g,pasta,S4,2,10,11.0,3.08
+16,12,Tomato Sauce 400g,pasta,S4,1,7,11.2,3.58
+16,13,Olive Oil 500ml,condiments,S4,4,6,27.0,5.4
+16,14,Chicken Breast 500g,meat,S5,3,18,90.0,16.2
+16,15,Ground Beef 400g,meat,S5,2,12,50.4,8.06
+16,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+16,17,Bananas 1kg,produce,S6,3,19,24.7,6.17
+16,18,Apples 1kg,produce,S6,2,11,22.0,4.84
+16,19,Tomatoes 500g,produce,S6,4,8,14.4,2.88
+16,20,Potato Chips 150g,snacks,S7,3,13,36.4,14.56
+17,1,Whole Milk 1L,dairy,S1,3,20,24.0,3.6
+17,2,Greek Yogurt,dairy,S1,2,12,30.0,9.0
+17,3,Cheddar Cheese,dairy,S1,1,7,26.6,6.65
+17,4,White Bread,bakery,S2,3,17,17.0,3.4
+17,5,Croissants x4,bakery,S2,2,10,22.0,7.7
+17,6,Baguette,bakery,S2,4,8,12.0,3.0
+17,7,Coca-Cola 2L,beverages,S3,3,18,32.4,6.48
+17,8,Orange Juice 1L,beverages,S3,2,11,27.5,6.05
+17,9,Sparkling Water 1.5L,beverages,S3,1,6,5.4,0.97
+17,10,Spaghetti 500g,pasta,S4,3,15,16.5,4.62
+17,11,Penne 500g,pasta,S4,2,9,9.9,2.77
+17,12,Tomato Sauce 400g,pasta,S4,1,8,12.8,4.1
+17,13,Olive Oil 500ml,condiments,S4,4,6,27.0,5.4
+17,14,Chicken Breast 500g,meat,S5,3,14,70.0,12.6
+17,15,Ground Beef 400g,meat,S5,2,10,42.0,6.72
+17,16,Salmon Fillet 300g,meat,S5,1,4,26.0,5.72
+17,17,Bananas 1kg,produce,S6,3,21,27.3,6.83
+17,18,Apples 1kg,produce,S6,2,13,26.0,5.72
+17,19,Tomatoes 500g,produce,S6,4,9,16.2,3.24
+17,20,Potato Chips 150g,snacks,S7,3,12,33.6,13.44
+18,1,Whole Milk 1L,dairy,S1,3,20,24.0,3.6
+18,2,Greek Yogurt,dairy,S1,2,11,27.5,8.25
+18,3,Cheddar Cheese,dairy,S1,1,6,22.8,5.7
+18,4,White Bread,bakery,S2,3,18,18.0,3.6
+18,5,Croissants x4,bakery,S2,2,9,19.8,6.93
+18,6,Baguette,bakery,S2,4,7,10.5,2.62
+18,7,Coca-Cola 2L,beverages,S3,3,18,32.4,6.48
+18,8,Orange Juice 1L,beverages,S3,2,9,22.5,4.95
+18,9,Sparkling Water 1.5L,beverages,S3,1,6,5.4,0.97
+18,10,Spaghetti 500g,pasta,S4,3,17,18.7,5.24
+18,11,Penne 500g,pasta,S4,2,10,11.0,3.08
+18,12,Tomato Sauce 400g,pasta,S4,1,9,14.4,4.61
+18,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+18,14,Chicken Breast 500g,meat,S5,3,14,70.0,12.6
+18,15,Ground Beef 400g,meat,S5,2,10,42.0,6.72
+18,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+18,17,Bananas 1kg,produce,S6,3,17,22.1,5.53
+18,18,Apples 1kg,produce,S6,2,13,26.0,5.72
+18,19,Tomatoes 500g,produce,S6,4,11,19.8,3.96
+18,20,Potato Chips 150g,snacks,S7,3,14,39.2,15.68
+19,1,Whole Milk 1L,dairy,S1,3,19,22.8,3.42
+19,2,Greek Yogurt,dairy,S1,2,12,30.0,9.0
+19,3,Cheddar Cheese,dairy,S1,1,7,26.6,6.65
+19,4,White Bread,bakery,S2,3,19,19.0,3.8
+19,5,Croissants x4,bakery,S2,2,10,22.0,7.7
+19,6,Baguette,bakery,S2,4,7,10.5,2.62
+19,7,Coca-Cola 2L,beverages,S3,3,20,36.0,7.2
+19,8,Orange Juice 1L,beverages,S3,2,12,30.0,6.6
+19,9,Sparkling Water 1.5L,beverages,S3,1,5,4.5,0.81
+19,10,Spaghetti 500g,pasta,S4,3,14,15.4,4.31
+19,11,Penne 500g,pasta,S4,2,9,9.9,2.77
+19,12,Tomato Sauce 400g,pasta,S4,1,7,11.2,3.58
+19,13,Olive Oil 500ml,condiments,S4,4,6,27.0,5.4
+19,14,Chicken Breast 500g,meat,S5,3,17,85.0,15.3
+19,15,Ground Beef 400g,meat,S5,2,10,42.0,6.72
+19,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+19,17,Bananas 1kg,produce,S6,3,21,27.3,6.83
+19,18,Apples 1kg,produce,S6,2,11,22.0,4.84
+19,19,Tomatoes 500g,produce,S6,4,10,18.0,3.6
+19,20,Potato Chips 150g,snacks,S7,3,13,36.4,14.56
+20,1,Whole Milk 1L,dairy,S1,3,18,21.6,3.24
+20,2,Greek Yogurt,dairy,S1,2,12,30.0,9.0
+20,3,Cheddar Cheese,dairy,S1,1,7,26.6,6.65
+20,4,White Bread,bakery,S2,3,21,21.0,4.2
+20,5,Croissants x4,bakery,S2,2,10,22.0,7.7
+20,6,Baguette,bakery,S2,4,8,12.0,3.0
+20,7,Coca-Cola 2L,beverages,S3,3,16,28.8,5.76
+20,8,Orange Juice 1L,beverages,S3,2,10,25.0,5.5
+20,9,Sparkling Water 1.5L,beverages,S3,1,7,6.3,1.13
+20,10,Spaghetti 500g,pasta,S4,3,18,19.8,5.54
+20,11,Penne 500g,pasta,S4,2,11,12.1,3.39
+20,12,Tomato Sauce 400g,pasta,S4,1,7,11.2,3.58
+20,13,Olive Oil 500ml,condiments,S4,4,6,27.0,5.4
+20,14,Chicken Breast 500g,meat,S5,3,17,85.0,15.3
+20,15,Ground Beef 400g,meat,S5,2,11,46.2,7.39
+20,16,Salmon Fillet 300g,meat,S5,1,6,39.0,8.58
+20,17,Bananas 1kg,produce,S6,3,21,27.3,6.83
+20,18,Apples 1kg,produce,S6,2,12,24.0,5.28
+20,19,Tomatoes 500g,produce,S6,4,10,18.0,3.6
+20,20,Potato Chips 150g,snacks,S7,3,15,42.0,16.8
+21,1,Whole Milk 1L,dairy,S1,3,17,20.4,3.06
+21,2,Greek Yogurt,dairy,S1,2,13,32.5,9.75
+21,3,Cheddar Cheese,dairy,S1,1,7,26.6,6.65
+21,4,White Bread,bakery,S2,3,21,21.0,4.2
+21,5,Croissants x4,bakery,S2,2,9,19.8,6.93
+21,6,Baguette,bakery,S2,4,8,12.0,3.0
+21,7,Coca-Cola 2L,beverages,S3,3,17,30.6,6.12
+21,8,Orange Juice 1L,beverages,S3,2,9,22.5,4.95
+21,9,Sparkling Water 1.5L,beverages,S3,1,7,6.3,1.13
+21,10,Spaghetti 500g,pasta,S4,3,14,15.4,4.31
+21,11,Penne 500g,pasta,S4,2,9,9.9,2.77
+21,12,Tomato Sauce 400g,pasta,S4,1,9,14.4,4.61
+21,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+21,14,Chicken Breast 500g,meat,S5,3,16,80.0,14.4
+21,15,Ground Beef 400g,meat,S5,2,12,50.4,8.06
+21,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+21,17,Bananas 1kg,produce,S6,3,18,23.4,5.85
+21,18,Apples 1kg,produce,S6,2,12,24.0,5.28
+21,19,Tomatoes 500g,produce,S6,4,10,18.0,3.6
+21,20,Potato Chips 150g,snacks,S7,3,15,42.0,16.8
+22,1,Whole Milk 1L,dairy,S1,3,22,26.4,3.96
+22,2,Greek Yogurt,dairy,S1,2,13,32.5,9.75
+22,3,Cheddar Cheese,dairy,S1,1,6,22.8,5.7
+22,4,White Bread,bakery,S2,3,19,19.0,3.8
+22,5,Croissants x4,bakery,S2,2,8,17.6,6.16
+22,6,Baguette,bakery,S2,4,7,10.5,2.62
+22,7,Coca-Cola 2L,beverages,S3,3,17,30.6,6.12
+22,8,Orange Juice 1L,beverages,S3,2,12,30.0,6.6
+22,9,Sparkling Water 1.5L,beverages,S3,1,6,5.4,0.97
+22,10,Spaghetti 500g,pasta,S4,3,15,16.5,4.62
+22,11,Penne 500g,pasta,S4,2,9,9.9,2.77
+22,12,Tomato Sauce 400g,pasta,S4,1,8,12.8,4.1
+22,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+22,14,Chicken Breast 500g,meat,S5,3,14,70.0,12.6
+22,15,Ground Beef 400g,meat,S5,2,10,42.0,6.72
+22,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+22,17,Bananas 1kg,produce,S6,3,17,22.1,5.53
+22,18,Apples 1kg,produce,S6,2,14,28.0,6.16
+22,19,Tomatoes 500g,produce,S6,4,10,18.0,3.6
+22,20,Potato Chips 150g,snacks,S7,3,12,33.6,13.44
+23,1,Whole Milk 1L,dairy,S1,3,17,20.4,3.06
+23,2,Greek Yogurt,dairy,S1,2,13,32.5,9.75
+23,3,Cheddar Cheese,dairy,S1,1,6,22.8,5.7
+23,4,White Bread,bakery,S2,3,18,18.0,3.6
+23,5,Croissants x4,bakery,S2,2,10,22.0,7.7
+23,6,Baguette,bakery,S2,4,8,12.0,3.0
+23,7,Coca-Cola 2L,beverages,S3,3,20,36.0,7.2
+23,8,Orange Juice 1L,beverages,S3,2,12,30.0,6.6
+23,9,Sparkling Water 1.5L,beverages,S3,1,6,5.4,0.97
+23,10,Spaghetti 500g,pasta,S4,3,14,15.4,4.31
+23,11,Penne 500g,pasta,S4,2,11,12.1,3.39
+23,12,Tomato Sauce 400g,pasta,S4,1,8,12.8,4.1
+23,13,Olive Oil 500ml,condiments,S4,4,6,27.0,5.4
+23,14,Chicken Breast 500g,meat,S5,3,18,90.0,16.2
+23,15,Ground Beef 400g,meat,S5,2,10,42.0,6.72
+23,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+23,17,Bananas 1kg,produce,S6,3,17,22.1,5.53
+23,18,Apples 1kg,produce,S6,2,12,24.0,5.28
+23,19,Tomatoes 500g,produce,S6,4,8,14.4,2.88
+23,20,Potato Chips 150g,snacks,S7,3,12,33.6,13.44
+24,1,Whole Milk 1L,dairy,S1,3,18,21.6,3.24
+24,2,Greek Yogurt,dairy,S1,2,12,30.0,9.0
+24,3,Cheddar Cheese,dairy,S1,1,7,26.6,6.65
+24,4,White Bread,bakery,S2,3,19,19.0,3.8
+24,5,Croissants x4,bakery,S2,2,10,22.0,7.7
+24,6,Baguette,bakery,S2,4,7,10.5,2.62
+24,7,Coca-Cola 2L,beverages,S3,3,16,28.8,5.76
+24,8,Orange Juice 1L,beverages,S3,2,12,30.0,6.6
+24,9,Sparkling Water 1.5L,beverages,S3,1,6,5.4,0.97
+24,10,Spaghetti 500g,pasta,S4,3,19,20.9,5.85
+24,11,Penne 500g,pasta,S4,2,8,8.8,2.46
+24,12,Tomato Sauce 400g,pasta,S4,1,9,14.4,4.61
+24,13,Olive Oil 500ml,condiments,S4,4,6,27.0,5.4
+24,14,Chicken Breast 500g,meat,S5,3,18,90.0,16.2
+24,15,Ground Beef 400g,meat,S5,2,11,46.2,7.39
+24,16,Salmon Fillet 300g,meat,S5,1,6,39.0,8.58
+24,17,Bananas 1kg,produce,S6,3,17,22.1,5.53
+24,18,Apples 1kg,produce,S6,2,13,26.0,5.72
+24,19,Tomatoes 500g,produce,S6,4,11,19.8,3.96
+24,20,Potato Chips 150g,snacks,S7,3,14,39.2,15.68
+25,1,Whole Milk 1L,dairy,S1,3,21,25.2,3.78
+25,2,Greek Yogurt,dairy,S1,2,12,30.0,9.0
+25,3,Cheddar Cheese,dairy,S1,1,7,26.6,6.65
+25,4,White Bread,bakery,S2,3,19,19.0,3.8
+25,5,Croissants x4,bakery,S2,2,9,19.8,6.93
+25,6,Baguette,bakery,S2,4,8,12.0,3.0
+25,7,Coca-Cola 2L,beverages,S3,3,15,27.0,5.4
+25,8,Orange Juice 1L,beverages,S3,2,10,25.0,5.5
+25,9,Sparkling Water 1.5L,beverages,S3,1,7,6.3,1.13
+25,10,Spaghetti 500g,pasta,S4,3,18,19.8,5.54
+25,11,Penne 500g,pasta,S4,2,10,11.0,3.08
+25,12,Tomato Sauce 400g,pasta,S4,1,8,12.8,4.1
+25,13,Olive Oil 500ml,condiments,S4,4,6,27.0,5.4
+25,14,Chicken Breast 500g,meat,S5,3,14,70.0,12.6
+25,15,Ground Beef 400g,meat,S5,2,11,46.2,7.39
+25,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+25,17,Bananas 1kg,produce,S6,3,20,26.0,6.5
+25,18,Apples 1kg,produce,S6,2,11,22.0,4.84
+25,19,Tomatoes 500g,produce,S6,4,11,19.8,3.96
+25,20,Potato Chips 150g,snacks,S7,3,16,44.8,17.92
+26,1,Whole Milk 1L,dairy,S1,3,21,25.2,3.78
+26,2,Greek Yogurt,dairy,S1,2,12,30.0,9.0
+26,3,Cheddar Cheese,dairy,S1,1,6,22.8,5.7
+26,4,White Bread,bakery,S2,3,20,20.0,4.0
+26,5,Croissants x4,bakery,S2,2,10,22.0,7.7
+26,6,Baguette,bakery,S2,4,6,9.0,2.25
+26,7,Coca-Cola 2L,beverages,S3,3,20,36.0,7.2
+26,8,Orange Juice 1L,beverages,S3,2,12,30.0,6.6
+26,9,Sparkling Water 1.5L,beverages,S3,1,7,6.3,1.13
+26,10,Spaghetti 500g,pasta,S4,3,18,19.8,5.54
+26,11,Penne 500g,pasta,S4,2,10,11.0,3.08
+26,12,Tomato Sauce 400g,pasta,S4,1,8,12.8,4.1
+26,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+26,14,Chicken Breast 500g,meat,S5,3,18,90.0,16.2
+26,15,Ground Beef 400g,meat,S5,2,10,42.0,6.72
+26,16,Salmon Fillet 300g,meat,S5,1,4,26.0,5.72
+26,17,Bananas 1kg,produce,S6,3,19,24.7,6.17
+26,18,Apples 1kg,produce,S6,2,14,28.0,6.16
+26,19,Tomatoes 500g,produce,S6,4,11,19.8,3.96
+26,20,Potato Chips 150g,snacks,S7,3,13,36.4,14.56
+27,1,Whole Milk 1L,dairy,S1,3,20,24.0,3.6
+27,2,Greek Yogurt,dairy,S1,2,11,27.5,8.25
+27,3,Cheddar Cheese,dairy,S1,1,8,30.4,7.6
+27,4,White Bread,bakery,S2,3,21,21.0,4.2
+27,5,Croissants x4,bakery,S2,2,10,22.0,7.7
+27,6,Baguette,bakery,S2,4,7,10.5,2.62
+27,7,Coca-Cola 2L,beverages,S3,3,17,30.6,6.12
+27,8,Orange Juice 1L,beverages,S3,2,10,25.0,5.5
+27,9,Sparkling Water 1.5L,beverages,S3,1,5,4.5,0.81
+27,10,Spaghetti 500g,pasta,S4,3,18,19.8,5.54
+27,11,Penne 500g,pasta,S4,2,11,12.1,3.39
+27,12,Tomato Sauce 400g,pasta,S4,1,9,14.4,4.61
+27,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+27,14,Chicken Breast 500g,meat,S5,3,16,80.0,14.4
+27,15,Ground Beef 400g,meat,S5,2,12,50.4,8.06
+27,16,Salmon Fillet 300g,meat,S5,1,6,39.0,8.58
+27,17,Bananas 1kg,produce,S6,3,21,27.3,6.83
+27,18,Apples 1kg,produce,S6,2,11,22.0,4.84
+27,19,Tomatoes 500g,produce,S6,4,9,16.2,3.24
+27,20,Potato Chips 150g,snacks,S7,3,12,33.6,13.44
+28,1,Whole Milk 1L,dairy,S1,3,22,26.4,3.96
+28,2,Greek Yogurt,dairy,S1,2,12,30.0,9.0
+28,3,Cheddar Cheese,dairy,S1,1,6,22.8,5.7
+28,4,White Bread,bakery,S2,3,20,20.0,4.0
+28,5,Croissants x4,bakery,S2,2,9,19.8,6.93
+28,6,Baguette,bakery,S2,4,7,10.5,2.62
+28,7,Coca-Cola 2L,beverages,S3,3,16,28.8,5.76
+28,8,Orange Juice 1L,beverages,S3,2,11,27.5,6.05
+28,9,Sparkling Water 1.5L,beverages,S3,1,6,5.4,0.97
+28,10,Spaghetti 500g,pasta,S4,3,18,19.8,5.54
+28,11,Penne 500g,pasta,S4,2,10,11.0,3.08
+28,12,Tomato Sauce 400g,pasta,S4,1,9,14.4,4.61
+28,13,Olive Oil 500ml,condiments,S4,4,7,31.5,6.3
+28,14,Chicken Breast 500g,meat,S5,3,16,80.0,14.4
+28,15,Ground Beef 400g,meat,S5,2,12,50.4,8.06
+28,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+28,17,Bananas 1kg,produce,S6,3,17,22.1,5.53
+28,18,Apples 1kg,produce,S6,2,11,22.0,4.84
+28,19,Tomatoes 500g,produce,S6,4,10,18.0,3.6
+28,20,Potato Chips 150g,snacks,S7,3,15,42.0,16.8
+29,1,Whole Milk 1L,dairy,S1,3,21,25.2,3.78
+29,2,Greek Yogurt,dairy,S1,2,11,27.5,8.25
+29,3,Cheddar Cheese,dairy,S1,1,6,22.8,5.7
+29,4,White Bread,bakery,S2,3,16,16.0,3.2
+29,5,Croissants x4,bakery,S2,2,9,19.8,6.93
+29,6,Baguette,bakery,S2,4,7,10.5,2.62
+29,7,Coca-Cola 2L,beverages,S3,3,17,30.6,6.12
+29,8,Orange Juice 1L,beverages,S3,2,11,27.5,6.05
+29,9,Sparkling Water 1.5L,beverages,S3,1,7,6.3,1.13
+29,10,Spaghetti 500g,pasta,S4,3,16,17.6,4.93
+29,11,Penne 500g,pasta,S4,2,10,11.0,3.08
+29,12,Tomato Sauce 400g,pasta,S4,1,8,12.8,4.1
+29,13,Olive Oil 500ml,condiments,S4,4,6,27.0,5.4
+29,14,Chicken Breast 500g,meat,S5,3,16,80.0,14.4
+29,15,Ground Beef 400g,meat,S5,2,12,50.4,8.06
+29,16,Salmon Fillet 300g,meat,S5,1,6,39.0,8.58
+29,17,Bananas 1kg,produce,S6,3,17,22.1,5.53
+29,18,Apples 1kg,produce,S6,2,14,28.0,6.16
+29,19,Tomatoes 500g,produce,S6,4,9,16.2,3.24
+29,20,Potato Chips 150g,snacks,S7,3,13,36.4,14.56
+30,1,Whole Milk 1L,dairy,S1,3,20,24.0,3.6
+30,2,Greek Yogurt,dairy,S1,2,13,32.5,9.75
+30,3,Cheddar Cheese,dairy,S1,1,7,26.6,6.65
+30,4,White Bread,bakery,S2,3,18,18.0,3.6
+30,5,Croissants x4,bakery,S2,2,9,19.8,6.93
+30,6,Baguette,bakery,S2,4,7,10.5,2.62
+30,7,Coca-Cola 2L,beverages,S3,3,15,27.0,5.4
+30,8,Orange Juice 1L,beverages,S3,2,10,25.0,5.5
+30,9,Sparkling Water 1.5L,beverages,S3,1,5,4.5,0.81
+30,10,Spaghetti 500g,pasta,S4,3,15,16.5,4.62
+30,11,Penne 500g,pasta,S4,2,9,9.9,2.77
+30,12,Tomato Sauce 400g,pasta,S4,1,8,12.8,4.1
+30,13,Olive Oil 500ml,condiments,S4,4,6,27.0,5.4
+30,14,Chicken Breast 500g,meat,S5,3,15,75.0,13.5
+30,15,Ground Beef 400g,meat,S5,2,13,54.6,8.74
+30,16,Salmon Fillet 300g,meat,S5,1,5,32.5,7.15
+30,17,Bananas 1kg,produce,S6,3,20,26.0,6.5
+30,18,Apples 1kg,produce,S6,2,11,22.0,4.84
+30,19,Tomatoes 500g,produce,S6,4,8,14.4,2.88
+30,20,Potato Chips 150g,snacks,S7,3,12,33.6,13.44
