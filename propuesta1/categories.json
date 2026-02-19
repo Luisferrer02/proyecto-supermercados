@@ -1,0 +1,294 @@
+[
+  {
+    "id": 1,
+    "name": "Lácteos",
+    "base_demand_mean_per_day": 2.672007995112271,
+    "seasonality_amp": 0.08515766217383751,
+    "margin_avg": 0.1497820493137682,
+    "facing_width_avg_cm": 10.75568080633457,
+    "products_per_category": 91,
+    "adjacency_bonus": {
+      "Panadería": 0.15452924534508727
+    }
+  },
+  {
+    "id": 2,
+    "name": "Panadería",
+    "base_demand_mean_per_day": 2.2032186314509765,
+    "seasonality_amp": 0.1075501516890335,
+    "margin_avg": 0.3927241206968033,
+    "facing_width_avg_cm": 11.435018684504092,
+    "products_per_category": 74,
+    "adjacency_bonus": {
+      "Lácteos": 0.15452924534508727
+    }
+  },
+  {
+    "id": 3,
+    "name": "Frutas",
+    "base_demand_mean_per_day": 2.7766647311609027,
+    "seasonality_amp": 0.13472517720537971,
+    "margin_avg": 0.21190704555960588,
+    "facing_width_avg_cm": 12.945082677348061,
+    "products_per_category": 95,
+    "adjacency_bonus": {
+      "Dulces y galletas": 0.12579152833332108
+    }
+  },
+  {
+    "id": 4,
+    "name": "Verduras",
+    "base_demand_mean_per_day": 1.7211683039116152,
+    "seasonality_amp": 0.18540359526537759,
+    "margin_avg": 0.3230821003007883,
+    "facing_width_avg_cm": 14.783295201740923,
+    "products_per_category": 88,
+    "adjacency_bonus": {
+      "Carnes frescas": 0.0836803641130218,
+      "Pescado": 0.15153157462972086
+    }
+  },
+  {
+    "id": 5,
+    "name": "Carnes frescas",
+    "base_demand_mean_per_day": 1.636654734458864,
+    "seasonality_amp": 0.09805757188566303,
+    "margin_avg": 0.19598435230374722,
+    "facing_width_avg_cm": 8.851037568617521,
+    "products_per_category": 120,
+    "adjacency_bonus": {
+      "Verduras": 0.0836803641130218
+    }
+  },
+  {
+    "id": 6,
+    "name": "Pescado",
+    "base_demand_mean_per_day": 3.4762443551169753,
+    "seasonality_amp": 0.3226788609617882,
+    "margin_avg": 0.30186885967290134,
+    "facing_width_avg_cm": 12.24285755589638,
+    "products_per_category": 107,
+    "adjacency_bonus": {
+      "Verduras": 0.15153157462972086
+    }
+  },
+  {
+    "id": 7,
+    "name": "Bebidas alcohólicas",
+    "base_demand_mean_per_day": 3.3446034545663843,
+    "seasonality_amp": 0.22156273740671223,
+    "margin_avg": 0.2480328783642699,
+    "facing_width_avg_cm": 9.55925469141441,
+    "products_per_category": 81,
+    "adjacency_bonus": {}
+  },
+  {
+    "id": 8,
+    "name": "Bebidas no alcohólicas",
+    "base_demand_mean_per_day": 1.8868610896031417,
+    "seasonality_amp": 0.3850629072082662,
+    "margin_avg": 0.24651149700142255,
+    "facing_width_avg_cm": 10.82550613021001,
+    "products_per_category": 118,
+    "adjacency_bonus": {
+      "Snacks": 0.1475640799034941,
+      "Helados": 0.0890593469788186
+    }
+  },
+  {
+    "id": 9,
+    "name": "Snacks",
+    "base_demand_mean_per_day": 3.4100806698929635,
+    "seasonality_amp": 0.4381853416473581,
+    "margin_avg": 0.26086956751183854,
+    "facing_width_avg_cm": 7.948627353324156,
+    "products_per_category": 66,
+    "adjacency_bonus": {
+      "Bebidas no alcohólicas": 0.1475640799034941
+    }
+  },
+  {
+    "id": 10,
+    "name": "Cereales y desayuno",
+    "base_demand_mean_per_day": 1.2818811255242175,
+    "seasonality_amp": 0.2746747986035918,
+    "margin_avg": 0.2958539691076715,
+    "facing_width_avg_cm": 11.751180787934674,
+    "products_per_category": 91,
+    "adjacency_bonus": {}
+  },
+  {
+    "id": 11,
+    "name": "Pasta y arroz",
+    "base_demand_mean_per_day": 2.927255054743805,
+    "seasonality_amp": 0.19627108319336387,
+    "margin_avg": 0.3286972480785582,
+    "facing_width_avg_cm": 9.561195319594553,
+    "products_per_category": 100,
+    "adjacency_bonus": {
+      "Aceites y condimentos": 0.1821969396638429,
+      "Conservas": 0.05
+    }
+  },
+  {
+    "id": 12,
+    "name": "Conservas",
+    "base_demand_mean_per_day": 2.969661565594874,
+    "seasonality_amp": 0.34156545394767607,
+    "margin_avg": 0.2720281789093601,
+    "facing_width_avg_cm": 7.12533113208394,
+    "products_per_category": 57,
+    "adjacency_bonus": {
+      "Pasta y arroz": 0.05
+    }
+  },
+  {
+    "id": 13,
+    "name": "Aceites y condimentos",
+    "base_demand_mean_per_day": 1.0064006296275059,
+    "seasonality_amp": 0.18674789992086022,
+    "margin_avg": 0.4099228297786066,
+    "facing_width_avg_cm": 9.787472057877148,
+    "products_per_category": 122,
+    "adjacency_bonus": {
+      "Pasta y arroz": 0.1821969396638429
+    }
+  },
+  {
+    "id": 14,
+    "name": "Dulces y galletas",
+    "base_demand_mean_per_day": 1.2710322835389638,
+    "seasonality_amp": 0.2627099887882221,
+    "margin_avg": 0.10726795768076514,
+    "facing_width_avg_cm": 11.368847287091715,
+    "products_per_category": 107,
+    "adjacency_bonus": {
+      "Café y té": 0.10783848648535643,
+      "Frutas": 0.12579152833332108
+    }
+  },
+  {
+    "id": 15,
+    "name": "Café y té",
+    "base_demand_mean_per_day": 1.5581668382220724,
+    "seasonality_amp": 0.10191574535039279,
+    "margin_avg": 0.2821852145523443,
+    "facing_width_avg_cm": 13.70355778264183,
+    "products_per_category": 93,
+    "adjacency_bonus": {
+      "Dulces y galletas": 0.10783848648535643
+    }
+  },
+  {
+    "id": 16,
+    "name": "Congelados",
+    "base_demand_mean_per_day": 1.2043036359589026,
+    "seasonality_amp": 0.18769526355130778,
+    "margin_avg": 0.31568710591495097,
+    "facing_width_avg_cm": 13.426605782439124,
+    "products_per_category": 64,
+    "adjacency_bonus": {}
+  },
+  {
+    "id": 17,
+    "name": "Higiene personal",
+    "base_demand_mean_per_day": 1.5161118745127713,
+    "seasonality_amp": 0.2435090991853737,
+    "margin_avg": 0.2577777302901227,
+    "facing_width_avg_cm": 7.558387410994684,
+    "products_per_category": 70,
+    "adjacency_bonus": {
+      "Papel y hogar": 0.10609238165356245,
+      "Bebés": 0.1332938279649594
+    }
+  },
+  {
+    "id": 18,
+    "name": "Limpieza hogar",
+    "base_demand_mean_per_day": 2.6861482991451133,
+    "seasonality_amp": 0.51378112362068,
+    "margin_avg": 0.3067711462343836,
+    "facing_width_avg_cm": 8.874117809379348,
+    "products_per_category": 88,
+    "adjacency_bonus": {}
+  },
+  {
+    "id": 19,
+    "name": "Papel y hogar",
+    "base_demand_mean_per_day": 1.541478345499302,
+    "seasonality_amp": 0.22925200038956745,
+    "margin_avg": 0.17643462471741886,
+    "facing_width_avg_cm": 7.150634110591286,
+    "products_per_category": 85,
+    "adjacency_bonus": {
+      "Higiene personal": 0.10609238165356245,
+      "Mascotas": 0.19579512711780064
+    }
+  },
+  {
+    "id": 20,
+    "name": "Bebés",
+    "base_demand_mean_per_day": 2.154870156441193,
+    "seasonality_amp": 0.419429004259718,
+    "margin_avg": 0.16150562335829755,
+    "facing_width_avg_cm": 8.569766475535257,
+    "products_per_category": 78,
+    "adjacency_bonus": {
+      "Higiene personal": 0.1332938279649594
+    }
+  },
+  {
+    "id": 21,
+    "name": "Mascotas",
+    "base_demand_mean_per_day": 7.981144637519634,
+    "seasonality_amp": 0.2150775925187318,
+    "margin_avg": 0.31849509661058634,
+    "facing_width_avg_cm": 10.18672420468382,
+    "products_per_category": 99,
+    "adjacency_bonus": {
+      "Papel y hogar": 0.19579512711780064
+    }
+  },
+  {
+    "id": 22,
+    "name": "Farmacia básica",
+    "base_demand_mean_per_day": 1.5024954854677806,
+    "seasonality_amp": 0.4815840668489758,
+    "margin_avg": 0.297258791772212,
+    "facing_width_avg_cm": 13.65818251282087,
+    "products_per_category": 105,
+    "adjacency_bonus": {}
+  },
+  {
+    "id": 23,
+    "name": "Helados",
+    "base_demand_mean_per_day": 2.072627247751986,
+    "seasonality_amp": 0.28579781421459993,
+    "margin_avg": 0.3906288710059889,
+    "facing_width_avg_cm": 11.357512876923227,
+    "products_per_category": 146,
+    "adjacency_bonus": {
+      "Bebidas no alcohólicas": 0.0890593469788186
+    }
+  },
+  {
+    "id": 24,
+    "name": "Navidad/estacional",
+    "base_demand_mean_per_day": 2.4841751238554792,
+    "seasonality_amp": 0.05465588088821868,
+    "margin_avg": 0.26204807867173996,
+    "facing_width_avg_cm": 9.733625357728025,
+    "products_per_category": 144,
+    "adjacency_bonus": {}
+  },
+  {
+    "id": 25,
+    "name": "Productos locales",
+    "base_demand_mean_per_day": 1.1454213845842898,
+    "seasonality_amp": 0.16393775370253139,
+    "margin_avg": 0.2636557101475488,
+    "facing_width_avg_cm": 11.175149097597867,
+    "products_per_category": 142,
+    "adjacency_bonus": {}
+  }
+]
