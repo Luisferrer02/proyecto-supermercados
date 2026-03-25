@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+venv/
+
+node_modules/
+.next/
+
+.idea/
+.DS_Store
+
+.env
+.env.*
+!.env.example
+
+# Todo esto se genera con los scripts
+mlops/data/monthly/
+mlops/data/knowledge_base/
+mlops/data/products_augmented.csv
+mlops/data/products_progress.csv
+mlops/results/*.pth
+mlops/results/*.png
+mlops/results/*.json
+mlops/results/*.csv
