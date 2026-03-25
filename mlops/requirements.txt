@@ -1,0 +1,14 @@
+# Core ML
+torch>=2.0.0
+numpy>=1.24.0
+pandas>=1.5.0
+
+# Visualization
+matplotlib>=3.7.0
+
+# LLM & RAG
+openai>=1.0.0
+chromadb>=0.4.0
+
+# Environment
+python-dotenv>=1.0.0
