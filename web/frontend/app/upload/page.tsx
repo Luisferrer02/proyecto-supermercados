@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Upload } from "lucide-react";
 import { api } from "@/lib/api";
 
 interface UploadedFile {
@@ -60,17 +61,23 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-bold">Upload CSV Files</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Upload monthly sales CSVs named <code className="bg-muted px-1 rounded text-xs">sales_YYYY_MM_monthname.csv</code>
+    <div className="space-y-8 max-w-3xl relative">
+      <div
+        className="fixed inset-0 bg-cover bg-center opacity-[0.09] blur-sm pointer-events-none -z-10"
+        style={{ backgroundImage: "url(/uploadcsv.png)" }}
+      />
+      <div className="animate-fade-in-up">
+        <h1 className="text-3xl font-heading font-extrabold uppercase tracking-tight text-secondary">
+          Upload CSV Files
+        </h1>
+        <p className="text-muted-foreground text-sm mt-2">
+          Upload monthly sales CSVs named <code className="bg-muted px-1.5 py-0.5 rounded text-xs">sales_YYYY_MM_monthname.csv</code>
         </p>
       </div>
 
       {/* Drop zone */}
       <div
-        className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-colors ${
+        className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
           dragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
         }`}
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -86,14 +93,14 @@ export default function UploadPage() {
           className="hidden"
           onChange={(e) => e.target.files && uploadFiles(e.target.files)}
         />
-        <div className="text-3xl mb-2">⬆</div>
+        <Upload size={40} className="text-primary mx-auto mb-3" />
         <p className="font-medium">Drop CSV files here or click to browse</p>
         <p className="text-xs text-muted-foreground mt-1">Accepts sales_*.csv files</p>
-        {uploading && <p className="text-sm text-yellow-400 mt-2">Uploading…</p>}
+        {uploading && <p className="text-sm text-amber-600 mt-2">Uploading…</p>}
       </div>
 
       {/* File list */}
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="text-sm flex items-center justify-between">
             Uploaded files

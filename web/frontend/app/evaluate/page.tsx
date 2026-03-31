@@ -43,11 +43,17 @@ export default function EvaluatePage() {
   const existingCharts = charts.filter((c) => c.exists);
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-2xl font-bold">Evaluate</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Runs <code className="bg-muted px-1 rounded text-xs">03_evaluate.py</code> to generate comparison charts from training results.
+    <div className="space-y-8 max-w-4xl relative">
+      <div
+        className="fixed inset-0 bg-cover bg-center opacity-[0.09] blur-sm pointer-events-none -z-10"
+        style={{ backgroundImage: "url(/evaluate.png)" }}
+      />
+      <div className="animate-fade-in-up">
+        <h1 className="text-3xl font-heading font-extrabold uppercase tracking-tight text-secondary">
+          Evaluate
+        </h1>
+        <p className="text-muted-foreground text-sm mt-2">
+          Runs <code className="bg-muted px-1.5 py-0.5 rounded text-xs">03_evaluate.py</code> to generate comparison charts from training results.
         </p>
       </div>
 
@@ -55,14 +61,14 @@ export default function EvaluatePage() {
         <button
           onClick={runEvaluate}
           disabled={streaming}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2 rounded-md text-sm font-medium disabled:opacity-50 transition-colors"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
         >
           {streaming ? "Generating charts…" : "Regenerate Charts"}
         </button>
         {streaming && (
           <button
             onClick={() => { api.evaluateStop(); setStreaming(false); }}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
           >
             Stop
           </button>
@@ -80,9 +86,9 @@ export default function EvaluatePage() {
       )}
 
       {existingCharts.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {existingCharts.map((chart) => (
-            <Card key={chart.name}>
+            <Card key={chart.name} className="shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs text-muted-foreground">
                   {CHART_LABELS[chart.name] ?? chart.name}
@@ -93,7 +99,7 @@ export default function EvaluatePage() {
                 <img
                   src={`${api.resultUrl(chart.name)}?t=${Date.now()}`}
                   alt={chart.name}
-                  className="w-full rounded border border-border"
+                  className="w-full rounded-lg border border-border"
                 />
               </CardContent>
             </Card>

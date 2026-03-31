@@ -19,16 +19,22 @@ export default function IngestPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-bold">Ingest</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Runs <code className="bg-muted px-1 rounded text-xs">04_ingest.py</code> in two parallel threads:
+    <div className="space-y-8 max-w-3xl relative">
+      <div
+        className="fixed inset-0 bg-cover bg-center opacity-[0.09] blur-sm pointer-events-none -z-10"
+        style={{ backgroundImage: "url(/ingest.png)" }}
+      />
+      <div className="animate-fade-in-up">
+        <h1 className="text-3xl font-heading font-extrabold uppercase tracking-tight text-secondary">
+          Ingest
+        </h1>
+        <p className="text-muted-foreground text-sm mt-2">
+          Runs <code className="bg-muted px-1.5 py-0.5 rounded text-xs">04_ingest.py</code> in two parallel threads:
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Card>
+      <div className="grid grid-cols-2 gap-6">
+        <Card className="shadow-sm border-t-2 border-t-[oklch(0.75_0.15_220)]">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Thread 1 — Embeddings</CardTitle>
           </CardHeader>
@@ -39,7 +45,7 @@ export default function IngestPage() {
             <p>Stores in ChromaDB vector database</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-sm border-t-2 border-t-[oklch(0.65_0.2_45)]">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Thread 2 — Production Models</CardTitle>
           </CardHeader>
@@ -56,23 +62,23 @@ export default function IngestPage() {
         <button
           onClick={startIngest}
           disabled={streaming}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2 rounded-md text-sm font-medium disabled:opacity-50 transition-colors"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
         >
           {streaming ? "Ingesting…" : "Start Ingestion"}
         </button>
         {streaming && (
           <button
             onClick={() => { api.ingestStop(); setStreaming(false); }}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
           >
             Stop
           </button>
         )}
         {done === true && (
-          <span className="text-sm text-green-400">✓ Ingestion complete — knowledge base ready</span>
+          <span className="text-sm text-green-600">✓ Ingestion complete — knowledge base ready</span>
         )}
         {done === false && (
-          <span className="text-sm text-red-400">⚠ Ingestion finished with errors</span>
+          <span className="text-sm text-red-600">⚠ Ingestion finished with errors</span>
         )}
       </div>
 
