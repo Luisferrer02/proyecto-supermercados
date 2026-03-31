@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, DM_Sans } from "next/font/google";
+import { Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "@/components/Sidebar";
+import { TopNav } from "@/components/TopNav";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+  weight: ["700", "800"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -26,11 +35,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      className={`${inter.variable} ${dmSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex bg-background text-foreground">
-        <Sidebar />
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <TopNav />
+        <main className="flex-1 w-full max-w-5xl mx-auto px-6 py-10">{children}</main>
       </body>
     </html>
   );
