@@ -64,7 +64,7 @@ export function ShelfMap({ products, rackId }: Props) {
                 {/* Label */}
                 <div
                   className={`w-20 text-right text-xs shrink-0 ${
-                    isEye ? "text-yellow-400 font-semibold" : "text-muted-foreground"
+                    isEye ? "text-amber-600 font-semibold" : "text-muted-foreground"
                   }`}
                 >
                   {isEye ? `★ Shelf ${shelfNum}` : `Shelf ${shelfNum}`}
@@ -73,7 +73,7 @@ export function ShelfMap({ products, rackId }: Props) {
                 {/* Shelf bar */}
                 <div
                   className={`relative border-b-2 ${
-                    isEye ? "border-yellow-500/60 bg-yellow-500/5" : "border-border bg-card"
+                    isEye ? "border-amber-500/60 bg-amber-500/5" : "border-border bg-card"
                   } rounded-sm`}
                   style={{ width: shelfWidth, height: 48 }}
                 >
@@ -128,7 +128,7 @@ export function ShelfMap({ products, rackId }: Props) {
 
       {/* Hover tooltip */}
       {hovered && (
-        <div className="rounded-lg border border-border bg-card p-3 text-xs space-y-1">
+        <div className="rounded-lg border border-border bg-card p-3 text-xs space-y-1 shadow-sm">
           <div className="font-semibold text-sm">{hovered.name || "—"}</div>
           <div className="text-muted-foreground">Category: {hovered.Category || rackId}</div>
           <div className="grid grid-cols-3 gap-2 mt-1">

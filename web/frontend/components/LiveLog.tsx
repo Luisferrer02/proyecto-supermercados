@@ -71,8 +71,8 @@ export function LiveLog({ url, onDone, autoStart = true }: Props) {
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         {active && (
-          <span className="inline-flex items-center gap-1.5 text-xs text-yellow-400">
-            <span className="h-2 w-2 rounded-full bg-yellow-400 animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 text-xs text-amber-600">
+            <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
             Running…
           </span>
         )}
@@ -82,9 +82,9 @@ export function LiveLog({ url, onDone, autoStart = true }: Props) {
           </span>
         )}
       </div>
-      <div className="bg-black/70 rounded-lg p-4 h-72 overflow-y-auto font-mono text-xs leading-5 border border-border">
+      <div className="bg-secondary rounded-lg p-4 h-72 overflow-y-auto font-mono text-xs leading-5 border border-border">
         {lines.length === 0 && (
-          <span className="text-muted-foreground">Waiting for output…</span>
+          <span className="text-secondary-foreground/60">Waiting for output…</span>
         )}
         {lines.map((l, i) => (
           <div
@@ -94,7 +94,7 @@ export function LiveLog({ url, onDone, autoStart = true }: Props) {
                 ? "text-red-400"
                 : l.type === "done"
                 ? "text-green-400 font-semibold"
-                : "text-gray-300"
+                : "text-secondary-foreground"
             }
           >
             {l.msg}
