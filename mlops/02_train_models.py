@@ -43,6 +43,7 @@ from models.mlp import build_mlp
 from models.lstm_model import build_lstm
 from models.transformer_model import build_transformer
 from models.ppo_agent import RackEnv, PPOTrainer
+from utils.model_persistence import save_model
 
 
 # ---------------------------------------------------------------------------
@@ -74,8 +75,31 @@ FEATURE_COLS = [
 # Data preparation
 # ---------------------------------------------------------------------------
 
-def load_and_prepare(sample_size: int | None = None):
-    """Load monthly CSVs and generate synthetic training data."""
+def load_and_prepare(sample_size: int | None = None,
+                     val_fraction: float = 0.15,
+                     test_fraction: float = 0.15,
+                     rack_holdout_fraction: float = 0.20,
+                     split_seed: int = 42):
+    """Load monthly CSVs and build a train/val/test split + rack holdout.
+
+    The existing code used two independent draws (seed=42 for train,
+    seed=99 for test) from the same population. Auditors flagged that as
+    insufficiently independent. We now:
+
+      1. Reserve `rack_holdout_fraction` of racks entirely — no sample
+         from these racks ever enters train/val/test.
+      2. From the remaining racks, generate a single pool of synthetic
+         samples, shuffle with `split_seed`, and slice into train / val
+         / test in `(1 - val - test) / val / test` proportions.
+      3. Save a SHA-256 hash of the test indices and the holdout rack
+         list to `results/test_split_hash.json` so the split is
+         reproducible across runs.
+
+    Returns: (df, train_df, val_df, test_df, holdout_df)
+    """
+    import hashlib
+    import json as _json
+
     print(f"Loading monthly data from {MONTHLY_DIR}...")
 
     csv_files = sorted(MONTHLY_DIR.glob("sales_*.csv"))
@@ -92,14 +116,67 @@ def load_and_prepare(sample_size: int | None = None):
 
     if sample_size:
         df = df.head(sample_size)
-    print(f"   Total: {len(df)} product-month records ")
+    print(f"   Total: {len(df)} product-month records")
 
-    # Generate synthetic training data from the combined dataset
-    train_df = generate_synthetic_training_data(df, n_samples=max(20000, len(df) * 3), seed=42)
-    test_df = generate_synthetic_training_data(df, n_samples=max(3000, len(df)), seed=99)
-    print(f"   Training samples: {len(train_df)}, Test samples: {len(test_df)}")
+    # ---- Rack holdout -----------------------------------------------------
+    rng = np.random.default_rng(split_seed)
+    all_racks = np.sort(df["rack_id"].unique())
+    n_holdout = max(1, int(round(len(all_racks) * rack_holdout_fraction)))
+    holdout_racks = rng.choice(all_racks, size=n_holdout, replace=False)
+    holdout_racks = sorted(int(r) for r in holdout_racks)
+    train_pool_racks = [int(r) for r in all_racks if int(r) not in set(holdout_racks)]
 
-    return df, train_df, test_df
+    print(f"   Racks: {len(all_racks)} total, "
+          f"{len(train_pool_racks)} for train/val/test, "
+          f"{len(holdout_racks)} held out")
+
+    # ---- Synthetic sample generation --------------------------------------
+    pool_df_source = df[df["rack_id"].isin(train_pool_racks)].reset_index(drop=True)
+    holdout_df_source = df[df["rack_id"].isin(holdout_racks)].reset_index(drop=True)
+
+    # Generate roughly 3 swaps per product, split into train/val/test
+    n_total = max(20000, len(pool_df_source) * 3) + max(3000, len(pool_df_source))
+    pool_samples = generate_synthetic_training_data(
+        pool_df_source, n_samples=n_total, seed=split_seed)
+
+    # Shuffle with a fixed permutation, then slice
+    perm = rng.permutation(len(pool_samples))
+    pool_samples = pool_samples.iloc[perm].reset_index(drop=True)
+    n = len(pool_samples)
+    n_test = int(round(n * test_fraction))
+    n_val = int(round(n * val_fraction))
+    test_df = pool_samples.iloc[:n_test].reset_index(drop=True)
+    val_df = pool_samples.iloc[n_test:n_test + n_val].reset_index(drop=True)
+    train_df = pool_samples.iloc[n_test + n_val:].reset_index(drop=True)
+
+    # Rack-holdout samples (smaller N because they're only for reporting)
+    holdout_n = max(3000, len(holdout_df_source))
+    holdout_df = generate_synthetic_training_data(
+        holdout_df_source, n_samples=holdout_n, seed=split_seed + 1)
+
+    print(f"   Split: train={len(train_df)}, val={len(val_df)}, "
+          f"test={len(test_df)}, rack_holdout={len(holdout_df)}")
+
+    # ---- Persist the split hash for reproducibility -----------------------
+    try:
+        RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+        test_idx_bytes = perm[:n_test].tobytes()
+        split_hash = hashlib.sha256(test_idx_bytes).hexdigest()
+        with open(RESULTS_DIR / "test_split_hash.json", "w") as f:
+            _json.dump({
+                "split_seed": split_seed,
+                "test_indices_hash": split_hash,
+                "holdout_racks": holdout_racks,
+                "n_train": len(train_df),
+                "n_val": len(val_df),
+                "n_test": len(test_df),
+                "n_holdout": len(holdout_df),
+            }, f, indent=2)
+        print(f"   Split hash (first 16 chars): {split_hash[:16]}…")
+    except Exception as exc:
+        print(f"   ⚠  Could not write split hash: {exc}")
+
+    return df, train_df, val_df, test_df, holdout_df
 
 
 def df_to_tensors(data_df: pd.DataFrame):
@@ -142,8 +219,30 @@ def train_supervised(model, train_X, train_y, test_X, test_y, name: str,
     with torch.no_grad():
         pred = model(test_X)
         mse = criterion(pred, test_y).item()
-    print(f"   [{name}] Test MSE: {mse:.4f}")
-    return mse, model
+        rmse = float(mse ** 0.5)
+        mae = float(torch.mean(torch.abs(pred - test_y)).item())
+    print(f"   [{name}] Test MSE: {mse:.2f} €²  |  RMSE: {rmse:.2f} €  |  MAE: {mae:.2f} €")
+    metrics = {"mse_eur2": mse, "rmse_eur": rmse, "mae_eur": mae, "mse": mse}
+    return metrics, model
+
+
+def _make_sequences(data_df, seq_len: int = 10):
+    """Shape a DataFrame of samples into (n_seq, seq_len, n_features) batches."""
+    X_all = data_df[FEATURE_COLS].values.copy()
+    y_all = data_df["profit_lift"].values.copy()
+    n_seq = len(X_all) // seq_len
+    X_seq = X_all[:n_seq * seq_len].reshape(n_seq, seq_len, -1)
+    y_seq = y_all[:n_seq * seq_len].reshape(n_seq, seq_len)
+    return torch.FloatTensor(X_seq), torch.FloatTensor(y_seq)
+
+
+def eval_seq_mse(model, df, seq_len: int = 10) -> float:
+    """Evaluate a sequence model on an arbitrary DataFrame split."""
+    X, y = _make_sequences(df, seq_len)
+    model.eval()
+    with torch.no_grad():
+        pred = model(X)
+        return nn.MSELoss()(pred, y).item()
 
 
 def train_sequence_model(model, train_df, test_df, name: str,
@@ -151,12 +250,7 @@ def train_sequence_model(model, train_df, test_df, name: str,
                          clip_grad: float = 0.0):
     """Train LSTM / Transformer on padded sequences."""
     def make_sequences(data_df, seq_len):
-        X_all = data_df[FEATURE_COLS].values.copy()
-        y_all = data_df["profit_lift"].values.copy()
-        n_seq = len(X_all) // seq_len
-        X_seq = X_all[:n_seq * seq_len].reshape(n_seq, seq_len, -1)
-        y_seq = y_all[:n_seq * seq_len].reshape(n_seq, seq_len)
-        return torch.FloatTensor(X_seq), torch.FloatTensor(y_seq)
+        return _make_sequences(data_df, seq_len)
 
     train_X, train_y = make_sequences(train_df, seq_len)
     test_X, test_y = make_sequences(test_df, seq_len)
@@ -190,8 +284,11 @@ def train_sequence_model(model, train_df, test_df, name: str,
     with torch.no_grad():
         pred = model(test_X)
         mse = criterion(pred, test_y).item()
-    print(f"   [{name}] Test MSE: {mse:.4f}")
-    return mse, model
+        rmse = float(mse ** 0.5)
+        mae = float(torch.mean(torch.abs(pred - test_y)).item())
+    print(f"   [{name}] Test MSE: {mse:.2f} €²  |  RMSE: {rmse:.2f} €  |  MAE: {mae:.2f} €")
+    metrics = {"mse_eur2": mse, "rmse_eur": rmse, "mae_eur": mae, "mse": mse}
+    return metrics, model
 
 
 def train_ppo(df: pd.DataFrame, n_episodes: int = 500) -> dict:
@@ -312,40 +409,106 @@ def main():
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Load data
-    df, train_df, test_df = load_and_prepare(args.sample_size)
+    # Load data with train/val/test + rack-holdout split
+    df, train_df, val_df, test_df, holdout_df = load_and_prepare(args.sample_size)
     input_dim = len(FEATURE_COLS)
 
     # Prepare flat tensors
     train_X, train_y = df_to_tensors(train_df)
     test_X, test_y = df_to_tensors(test_df)
+    val_X, val_y = df_to_tensors(val_df)
+    holdout_X, holdout_y = df_to_tensors(holdout_df)
 
     results = {}
 
     # ---- 1. MLP (larger) ----
     print("\n🔵 Training MLP …")
     mlp = build_mlp(input_dim=input_dim)
-    mse_mlp, mlp = train_supervised(mlp, train_X, train_y, test_X, test_y,
-                                     "MLP", epochs=args.epochs)
-    torch.save(mlp.state_dict(), RESULTS_DIR / "mlp.pth")
-    results["MLP"] = {"mse": mse_mlp}
+    metrics_mlp, mlp = train_supervised(mlp, train_X, train_y, test_X, test_y,
+                                         "MLP", epochs=args.epochs)
+    mlp_version = save_model(mlp, "mlp", RESULTS_DIR,
+                              metadata={"origin": "02_train_models.py",
+                                        "epochs": args.epochs, **metrics_mlp})
+    print(f"   💾 MLP saved (hash {mlp_version['hash']}) → {mlp_version['archive_path']}")
+
+    # Additional evaluations on validation + rack-holdout splits
+    mlp.eval()
+    with torch.no_grad():
+        val_mse = nn.MSELoss()(mlp(val_X), val_y).item()
+        holdout_mse = nn.MSELoss()(mlp(holdout_X), holdout_y).item()
+    print(f"   [MLP] Val MSE: {val_mse:.2f} €²  |  Holdout(rack) MSE: {holdout_mse:.2f} €²  "
+          f"|  Holdout RMSE: {holdout_mse ** 0.5:.2f} €")
+    results["MLP"] = {
+        **dict(metrics_mlp),
+        "val_mse_eur2": val_mse,
+        "val_rmse_eur": val_mse ** 0.5,
+        "holdout_rack_mse_eur2": holdout_mse,
+        "holdout_rack_rmse_eur": holdout_mse ** 0.5,
+        "version": mlp_version,
+    }
 
     # ---- 2. LSTM ----
     print("\n🟢 Training LSTM …")
     lstm = build_lstm(input_dim=input_dim)
-    mse_lstm, lstm = train_sequence_model(lstm, train_df, test_df,
-                                           "LSTM", epochs=args.epochs)
-    torch.save(lstm.state_dict(), RESULTS_DIR / "lstm.pth")
-    results["LSTM"] = {"mse": mse_lstm}
+    metrics_lstm, lstm = train_sequence_model(lstm, train_df, test_df,
+                                               "LSTM", epochs=args.epochs)
+    lstm_version = save_model(lstm, "lstm", RESULTS_DIR,
+                               metadata={"origin": "02_train_models.py",
+                                         "epochs": args.epochs, **metrics_lstm})
+    print(f"   💾 LSTM saved (hash {lstm_version['hash']}) → {lstm_version['archive_path']}")
+    lstm_val_mse = eval_seq_mse(lstm, val_df)
+    lstm_holdout_mse = eval_seq_mse(lstm, holdout_df)
+    print(f"   [LSTM] Val MSE: {lstm_val_mse:.2f} €²  |  Holdout(rack) MSE: {lstm_holdout_mse:.2f} €²")
+    results["LSTM"] = {
+        **dict(metrics_lstm),
+        "val_mse_eur2": lstm_val_mse,
+        "val_rmse_eur": lstm_val_mse ** 0.5,
+        "holdout_rack_mse_eur2": lstm_holdout_mse,
+        "holdout_rack_rmse_eur": lstm_holdout_mse ** 0.5,
+        "version": lstm_version,
+    }
 
     # ---- 3. Transformer ----
     print("\n🟡 Training Transformer …")
     transformer = build_transformer(input_dim=input_dim)
-    mse_trans, transformer = train_sequence_model(transformer, train_df, test_df,
-                                                   "Transformer", epochs=150,
-                                                   lr=1e-4, clip_grad=1.0)
-    torch.save(transformer.state_dict(), RESULTS_DIR / "transformer.pth")
-    results["Transformer"] = {"mse": mse_trans}
+    metrics_trans, transformer = train_sequence_model(transformer, train_df, test_df,
+                                                       "Transformer", epochs=150,
+                                                       lr=1e-4, clip_grad=1.0)
+    trans_version = save_model(transformer, "transformer", RESULTS_DIR,
+                                metadata={"origin": "02_train_models.py",
+                                          "epochs": 150, **metrics_trans})
+    print(f"   💾 Transformer saved (hash {trans_version['hash']}) → {trans_version['archive_path']}")
+    trans_val_mse = eval_seq_mse(transformer, val_df)
+    trans_holdout_mse = eval_seq_mse(transformer, holdout_df)
+    print(f"   [Trans] Val MSE: {trans_val_mse:.2f} €²  |  Holdout(rack) MSE: {trans_holdout_mse:.2f} €²")
+    results["Transformer"] = {
+        **dict(metrics_trans),
+        "val_mse_eur2": trans_val_mse,
+        "val_rmse_eur": trans_val_mse ** 0.5,
+        "holdout_rack_mse_eur2": trans_holdout_mse,
+        "holdout_rack_rmse_eur": trans_holdout_mse ** 0.5,
+        "version": trans_version,
+    }
+
+    # ---- Prediction baselines: Identity (predict 0) and Random ----
+    identity_mse = float(torch.mean(test_y ** 2).item())
+    random_pred = torch.randn_like(test_y) * float(test_y.std())
+    random_mse = float(torch.mean((random_pred - test_y) ** 2).item())
+    print(f"\n📏 Prediction baselines on test set ({test_y.numel()} samples):")
+    print(f"   [Identity] Predicts 0 → MSE: {identity_mse:.2f} €²  "
+          f"| RMSE: {identity_mse ** 0.5:.2f} €")
+    print(f"   [Random]   Gaussian    → MSE: {random_mse:.2f} €²  "
+          f"| RMSE: {random_mse ** 0.5:.2f} €")
+    results["_baseline_identity_prediction"] = {
+        "mse_eur2": identity_mse,
+        "rmse_eur": identity_mse ** 0.5,
+        "description": "Predicts profit_lift=0 for every sample (no-model baseline)",
+    }
+    results["_baseline_random_prediction"] = {
+        "mse_eur2": random_mse,
+        "rmse_eur": random_mse ** 0.5,
+        "description": "Gaussian noise with same std as target (noise-floor baseline)",
+    }
 
     # ---- 4. PPO ----
     print("\n🔴 Training PPO …")
@@ -401,17 +564,28 @@ def main():
     for name, layout_df in rack_layouts.items():
         layout_df.to_csv(RESULTS_DIR / f"rack_layout_{name.lower()}.csv", index=False)
 
-    # Print comparison table
-    print("\n" + "="*70)
-    print(f"{'Model':<15} {'MSE':>10} {'Orig Profit':>15} {'Opt Profit':>15} {'Lift':>10}")
-    print("-"*70)
+    # Print comparison table (MSE in €², RMSE in €, profits in €)
+    print("\n" + "="*88)
+    print(f"{'Model':<15} {'MSE (€²)':>12} {'RMSE (€)':>10} "
+          f"{'Orig (€)':>14} {'Opt (€)':>14} {'Lift (€)':>12}")
+    print("-"*88)
     for name, r in results.items():
-        mse_str = f"{r.get('mse', '-'):.4f}" if 'mse' in r else "N/A"
+        if name.startswith("_"):  # baselines for prediction, not optimization
+            continue
+        mse_val = r.get("mse_eur2", r.get("mse"))
+        mse_str = f"{mse_val:.2f}" if isinstance(mse_val, (int, float)) else "N/A"
+        rmse_val = r.get("rmse_eur")
+        rmse_str = f"{rmse_val:.2f}" if isinstance(rmse_val, (int, float)) else "N/A"
         orig = r.get("original_profit", 0)
         opt = r.get("optimized_profit", 0)
         lift = opt - orig
-        print(f"{name:<15} {mse_str:>10} {orig:>15.2f} {opt:>15.2f} {lift:>+10.2f}")
-    print("="*70)
+        print(f"{name:<15} {mse_str:>12} {rmse_str:>10} "
+              f"{orig:>14.2f} {opt:>14.2f} {lift:>+12.2f}")
+    print("="*88)
+    print("Note: MSE is in €² (squared errors), RMSE is the interpretable")
+    print("      typical error in €. Greedy is the heuristic baseline for")
+    print("      optimization; Identity/Random are prediction baselines.")
+    print("="*88)
 
 
 if __name__ == "__main__":

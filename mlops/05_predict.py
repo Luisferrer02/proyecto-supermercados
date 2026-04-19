@@ -176,51 +176,39 @@ def llm_forecast(target_year: int, target_month: int,
                  base_products: pd.DataFrame) -> dict:
     """
     Call the LLM to forecast sales multipliers per category.
-    Returns {category: multiplier} dict.
+    Returns {category: multiplier} dict, or {} if every candidate model
+    in the cascade failed (caller will fall back to heuristic).
     """
-    from openai import OpenAI
+    from utils.llm_client import chat_with_failover
 
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    if not api_key:
-        print("   ❌ OPENROUTER_API_KEY not set. Use --dry-run for heuristics.")
-        sys.exit(1)
-
-    client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+    api_key = os.getenv("OPENROUTER_API_KEY", "")
     prompt = build_forecast_prompt(target_year, target_month,
                                    context, base_products)
 
-    models_to_try = [MODEL_NAME, FALLBACK_MODEL]
-    for model in models_to_try:
+    content = chat_with_failover(prompt, api_key=api_key)
+    if not content:
+        return {}
+
+    # Extract JSON from the response (the model may wrap it in prose).
+    try:
+        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        raw = json_match.group(0) if json_match else content
+        multipliers = json.loads(raw)
+    except Exception as exc:
+        print(f"   ⚠  Could not parse JSON from LLM response: {exc}")
+        return {}
+
+    # Sanitize multipliers — clamp to a realistic range to neutralize
+    # hallucinated extremes.
+    clean: dict = {}
+    for cat, mult in multipliers.items():
         try:
-            print(f"   🤖 Querying LLM ({model.split('/')[-1]})…")
-            response = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3,
-                max_tokens=3000,
-            )
-            content = response.choices[0].message.content.strip()
-
-            # Extract JSON
-            json_match = re.search(r'\{.*\}', content, re.DOTALL)
-            if json_match:
-                content = json_match.group(0)
-            multipliers = json.loads(content)
-
-            # Sanitize
-            clean = {}
-            for cat, mult in multipliers.items():
-                clean[cat] = max(0.3, min(2.5, float(mult)))
-
-            print(f"   ✅ Got forecasts for {len(clean)} categories")
-            return clean
-
-        except Exception as e:
-            print(f"   ⚠  Error with {model}: {e}")
+            clean[cat] = max(0.3, min(2.5, float(mult)))
+        except (TypeError, ValueError):
             continue
 
-    print("   ⚠  All LLM attempts failed. Using neutral multipliers.")
-    return {}
+    print(f"   ✅ Got forecasts for {len(clean)} categories")
+    return clean
 
 
 def heuristic_forecast(target_month: int,
@@ -449,7 +437,7 @@ def optimize_ensemble(df: pd.DataFrame,
 
 def save_results(original_df: pd.DataFrame, optimized_df: pd.DataFrame,
                  target_year: int, target_month: int,
-                 multipliers: dict):
+                 multipliers: dict, forecast_source: str = "unknown"):
     """Save optimized layout and generate summary."""
     from utils.retail_physics import compute_rack_profit
 
@@ -461,11 +449,38 @@ def save_results(original_df: pd.DataFrame, optimized_df: pd.DataFrame,
     optimized_df.to_csv(out_csv, index=False)
     print(f"\n   💾 Optimized layout saved → {out_csv}")
 
-    # Save forecast multipliers
+    # Save per-product explanations (why each moved product changed shelf)
+    try:
+        from utils.explainability import explain_all
+        explanations = explain_all(original_df, optimized_df)
+        n_moved = sum(len(v) for v in explanations.values())
+        expl_path = RESULTS_DIR / (
+            f"explanations_{target_year}_{target_month:02d}.json"
+        )
+        with open(expl_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "_target_year": target_year,
+                "_target_month": target_month,
+                "n_products_moved": n_moved,
+                "by_rack": explanations,
+            }, f, indent=2, ensure_ascii=False)
+        print(f"   💾 Explanations ({n_moved} products moved) → {expl_path}")
+    except Exception as exc:
+        # Explainability is a nice-to-have; never let it break the run.
+        print(f"   ⚠  Could not generate explanations: {exc}")
+
+    # Save forecast multipliers (with metadata about where they came from)
     forecast_path = RESULTS_DIR / f"forecast_{target_year}_{target_month:02d}.json"
+    forecast_payload = {
+        "_source": forecast_source,   # "llm" | "heuristic" | "unknown"
+        "_target_year": target_year,
+        "_target_month": target_month,
+        "multipliers": multipliers,
+    }
     with open(forecast_path, "w") as f:
-        json.dump(multipliers, f, indent=2, ensure_ascii=False)
-    print(f"   💾 Forecast multipliers → {forecast_path}")
+        json.dump(forecast_payload, f, indent=2, ensure_ascii=False)
+    print(f"   💾 Forecast multipliers → {forecast_path}"
+          f"  (source: {forecast_source})")
 
     # Compute profit comparison per rack
     print(f"\n   {'='*60}")
@@ -573,15 +588,22 @@ def main():
     print(f"   Loaded {len(base_df)} products, "
           f"{base_df['Category'].nunique()} categories")
 
-    # Step 3: Forecast
+    # Step 3: Forecast (with automatic LLM → heuristic fallback)
     print(f"\n  Step 3: Forecasting sales for {month_name} {target_year}...")
+    categories = base_df["Category"].unique().tolist()
+    forecast_source = "heuristic"  # tracks what produced the multipliers for auditing
     if args.dry_run or not context:
-        print("   Using heuristic seasonal forecast")
-        categories = base_df["Category"].unique().tolist()
+        print("   Using heuristic seasonal forecast (dry-run or no RAG context)")
         multipliers = heuristic_forecast(target_month, categories)
     else:
         multipliers = llm_forecast(target_year, target_month,
                                    context, base_df)
+        if multipliers:
+            forecast_source = "llm"
+        else:
+            # Automatic fallback when the LLM call(s) failed or API key missing
+            print("   ⚠  LLM unavailable — falling back to heuristic forecast.")
+            multipliers = heuristic_forecast(target_month, categories)
 
     # Show top adjustments
     if multipliers:
@@ -613,7 +635,8 @@ def main():
 
     # Step 6: Save results
     save_results(original_df, optimized_df,
-                 target_year, target_month, multipliers)
+                 target_year, target_month, multipliers,
+                 forecast_source=forecast_source)
 
     print(f"\n  Done! Check results/ for output files.")
 

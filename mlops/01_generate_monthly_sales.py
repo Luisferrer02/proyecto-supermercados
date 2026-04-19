@@ -226,9 +226,11 @@ def llm_augment_batch(batch_df: pd.DataFrame, client, month: int, year: int,
                       model: str = MODEL_NAME) -> List[Dict]:
     """
     Send a batch of products to the LLM and parse JSON estimates.
-    Includes retry logic with exponential backoff and model fallback.
-    The prompt includes month context for seasonal awareness.
+    Uses the shared multi-model failover cascade in utils.llm_client so a
+    single model going down does not stop the run.
     """
+    from utils.llm_client import chat_with_failover
+
     month_es = MONTH_NAMES_ES.get(month, str(month))
 
     products_desc = []
@@ -257,74 +259,50 @@ Respond ONLY with a JSON array. Each element must have exactly these keys:
 "estimated_monthly_sales" (integer), "profit_margin_percentage" (float), "product_width_cm" (float).
 No markdown, no explanation, just the JSON array."""
 
-    models_to_try = [model, FALLBACK_MODEL] if model != FALLBACK_MODEL else [model]
-    max_retries = 3
+    api_key = os.getenv("OPENROUTER_API_KEY", "")
+    # Start with the caller's preferred model, then fall through to the
+    # rest of the built-in cascade. `resolve_models` applies the env
+    # override when set.
+    from utils.llm_client import resolve_models
+    cascade = resolve_models()
+    if model and model not in cascade:
+        cascade = [model] + cascade
+    elif model:
+        cascade = [model] + [m for m in cascade if m != model]
 
-    for current_model in models_to_try:
-        for attempt in range(max_retries):
-            try:
-                response = client.chat.completions.create(
-                    model=current_model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.3,
-                    max_tokens=5000,
-                    timeout=30,
-                )
-                content = response.choices[0].message.content.strip()
+    content = chat_with_failover(
+        prompt, api_key=api_key, models=cascade, max_tokens=5000,
+    )
 
-                # Try to extract JSON from possible markdown fences
-                json_match = re.search(r'\[.*\]', content, re.DOTALL)
-                if json_match:
-                    content = json_match.group(0)
-                results = json.loads(content)
+    if content:
+        try:
+            json_match = re.search(r'\[.*\]', content, re.DOTALL)
+            raw = json_match.group(0) if json_match else content
+            results = json.loads(raw)
 
-                # Validate length
-                if len(results) != len(batch_df):
-                    while len(results) < len(batch_df):
-                        results.append({
-                            "estimated_monthly_sales": 50,
-                            "profit_margin_percentage": 30.0,
-                            "product_width_cm": 12.0,
-                        })
-                    results = results[:len(batch_df)]
+            # Validate length
+            while len(results) < len(batch_df):
+                results.append({
+                    "estimated_monthly_sales": 50,
+                    "profit_margin_percentage": 30.0,
+                    "product_width_cm": 12.0,
+                })
+            results = results[:len(batch_df)]
 
-                # Sanitize values
-                for r in results:
-                    r["estimated_monthly_sales"] = max(1, int(
-                        r.get("estimated_monthly_sales", 50)))
-                    r["profit_margin_percentage"] = max(1.0, min(70.0, float(
-                        r.get("profit_margin_percentage", 30))))
-                    r["product_width_cm"] = max(2.0, min(60.0, float(
-                        r.get("product_width_cm", 12))))
+            # Sanitize values
+            for r in results:
+                r["estimated_monthly_sales"] = max(1, int(
+                    r.get("estimated_monthly_sales", 50)))
+                r["profit_margin_percentage"] = max(1.0, min(70.0, float(
+                    r.get("profit_margin_percentage", 30))))
+                r["product_width_cm"] = max(2.0, min(60.0, float(
+                    r.get("product_width_cm", 12))))
 
-                return results
+            return results
+        except Exception as e:
+            print(f"\n     ✗ Could not parse LLM JSON: {e}", end="")
 
-            except Exception as e:
-                err_str = str(e)
-                is_rate_limit = "429" in err_str or "rate" in err_str.lower()
-                wait = 2 ** (attempt + 1) + random.uniform(0, 2)  # jitter
-
-                if is_rate_limit:
-                    wait = max(wait, 5)
-                    if attempt < max_retries - 1:
-                        print(f"\n     Rate limited ({current_model}), "
-                              f"retrying in {wait:.0f}s "
-                              f"(attempt {attempt+2}/{max_retries})...",
-                              end="")
-                        time.sleep(wait)
-                        continue
-                    else:
-                        if current_model != models_to_try[-1]:
-                            print(f"\n     Switching to fallback model...",
-                                  end="")
-                            break  # try next model
-                else:
-                    print(f"\n     ✗ Error: {e}", end="")
-                    if attempt < max_retries - 1:
-                        time.sleep(wait)
-                        continue
-
-    # All retries exhausted — return defaults
+    # Every model in the cascade failed AND no parseable JSON — defaults
     print(" [using defaults]", end="")
     return [
         {"estimated_monthly_sales": 50,

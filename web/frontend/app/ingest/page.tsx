@@ -50,10 +50,10 @@ export default function IngestPage() {
             <CardTitle className="text-sm">Thread 2 — Production Models</CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground space-y-1">
-            <p>Generates synthetic training samples</p>
-            <p>Trains MLP (80 epochs)</p>
-            <p>Trains Transformer (120 epochs)</p>
-            <p>Saves mlp.pth + transformer.pth</p>
+            <p>Genera casos sintéticos de entrenamiento</p>
+            <p>Entrena el modelo rápido (MLP, 80 iteraciones)</p>
+            <p>Entrena el modelo preciso (Transformer, 120 iteraciones)</p>
+            <p>Guarda los modelos versionados en results/models/</p>
           </CardContent>
         </Card>
       </div>

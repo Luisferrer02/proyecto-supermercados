@@ -12,10 +12,32 @@ interface RackSummary {
   products: number;
 }
 
+interface Reason {
+  code: string;
+  text: string;
+}
+
+interface Explanation {
+  product: string;
+  old_shelf: number;
+  new_shelf: number;
+  margin_pct: number;
+  monthly_sales: number;
+  profit_score: number;
+  reasons: Reason[];
+}
+
+interface ExplanationsPayload {
+  n_products_moved: number;
+  by_rack: Record<string, Explanation[]>;
+}
+
 interface PredictResult {
   products: Product[];
   forecast: Record<string, number>;
+  forecastSource?: string | null;
   rackSummary: Record<string, RackSummary>;
+  explanations?: ExplanationsPayload | null;
 }
 
 export default function PredictPage() {
@@ -111,14 +133,17 @@ export default function PredictPage() {
                 className="bg-input border border-border rounded-lg px-3 py-1.5 text-sm w-40 focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-shadow"
               />
             </label>
-            <label className="flex items-center gap-2 self-end pb-1">
+            <label
+              className="flex items-center gap-2 self-end pb-1"
+              title="Cuando está activado, no se consulta al modelo de lenguaje; se usan multiplicadores estacionales predefinidos. Útil si la API está caída o para reproducibilidad."
+            >
               <input
                 type="checkbox"
                 checked={dryRun}
                 onChange={(e) => setDryRun(e.target.checked)}
                 className="rounded accent-primary"
               />
-              <span className="text-sm">Dry-run (skip LLM)</span>
+              <span className="text-sm">Modo sin IA (usar temporada fija)</span>
             </label>
           </div>
 
@@ -191,6 +216,46 @@ export default function PredictPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Explanations for moved products in the selected rack */}
+          {results.explanations?.by_rack?.[selectedRack]?.length ? (
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-sm">
+                  ¿Por qué se han movido estos productos?
+                  <span className="block text-xs font-normal text-muted-foreground mt-0.5">
+                    Explicación de cada reubicación en esta estantería
+                    ({results.explanations.by_rack[selectedRack].length} productos)
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3 text-sm">
+                  {results.explanations.by_rack[selectedRack].slice(0, 8).map((e) => (
+                    <li key={e.product} className="border-l-2 border-primary/40 pl-3">
+                      <div className="font-medium">{e.product}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        Balda {e.old_shelf} → Balda {e.new_shelf}
+                        {" · "}margen {e.margin_pct}%
+                        {" · "}{e.monthly_sales.toLocaleString()} ventas/mes
+                      </div>
+                      <ul className="mt-1 space-y-0.5 text-xs text-foreground/80">
+                        {e.reasons.map((r, i) => (
+                          <li key={i}>• {r.text}</li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+                {results.explanations.by_rack[selectedRack].length > 8 && (
+                  <p className="text-xs text-muted-foreground mt-3">
+                    + {results.explanations.by_rack[selectedRack].length - 8} productos
+                    más reubicados en esta estantería.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
 
           {/* Shelf Map */}
           <Card className="shadow-sm">

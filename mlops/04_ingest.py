@@ -304,7 +304,11 @@ def run_training_thread(csv_dir: Path, tracker: ProgressTracker,
         mlp.eval()
         with torch.no_grad():
             mlp_mse = criterion(mlp(test_X_flat), test_y_flat).item()
-        torch.save(mlp.state_dict(), RESULTS_DIR / "mlp.pth")
+        from utils.model_persistence import save_model
+        save_model(mlp, "mlp", RESULTS_DIR,
+                   metadata={"origin": "04_ingest.py",
+                             "epochs": epochs,
+                             "mse_eur2": mlp_mse})
 
         # ---- Train Transformer ----
         if train_X_seq is not None:
@@ -344,8 +348,10 @@ def run_training_thread(csv_dir: Path, tracker: ProgressTracker,
             with torch.no_grad():
                 trans_mse = criterion(
                     transformer(test_X_seq), test_y_seq).item()
-            torch.save(transformer.state_dict(),
-                       RESULTS_DIR / "transformer.pth")
+            save_model(transformer, "transformer", RESULTS_DIR,
+                       metadata={"origin": "04_ingest.py",
+                                 "epochs": trans_epochs,
+                                 "mse_eur2": trans_mse})
 
             tracker.update_training(
                 "done",
@@ -397,6 +403,17 @@ def main():
         print(f"    {f.name}")
     print(f"  Training epochs: {args.epochs}")
     print()
+
+    # Pre-flight: validate CSV schemas before starting heavy work
+    from utils.csv_schema import validate_directory, format_report, all_ok
+    validation = validate_directory(input_dir)
+    if not all_ok(validation):
+        print(format_report(validation))
+        print("\nAborting: at least one CSV failed schema validation.")
+        sys.exit(2)
+    n_warn = sum(len(r.warnings) for r in validation)
+    print(f"  Schema validation: {len(validation)} files OK"
+          f" ({n_warn} warnings)\n")
 
     tracker = ProgressTracker()
 

@@ -52,6 +52,7 @@ router.get('/results', (req: Request, res: Response) => {
   const resultsDir = process.env.RESULTS_DIR!;
   const csvPath = path.join(resultsDir, `optimized_${year}_${mon}_${monthName}.csv`);
   const forecastPath = path.join(resultsDir, `forecast_${year}_${mon}.json`);
+  const explanationsPath = path.join(resultsDir, `explanations_${year}_${mon}.json`);
 
   if (!fs.existsSync(csvPath)) {
     res.status(404).json({ error: `No results found for ${month}. Run prediction first.` });
@@ -72,9 +73,20 @@ router.get('/results', (req: Request, res: Response) => {
     return record;
   });
 
-  const forecast = fs.existsSync(forecastPath)
-    ? JSON.parse(fs.readFileSync(forecastPath, 'utf-8'))
-    : {};
+  // Forecast JSON comes in two shapes depending on the version of
+  // 05_predict.py that produced it. Normalize to a flat { category: mult }
+  // dict plus an optional source flag ("llm" | "heuristic").
+  let forecast: Record<string, number> = {};
+  let forecastSource: string | null = null;
+  if (fs.existsSync(forecastPath)) {
+    const raw = JSON.parse(fs.readFileSync(forecastPath, 'utf-8'));
+    if (raw && typeof raw === 'object' && raw.multipliers) {
+      forecast = raw.multipliers;
+      forecastSource = raw._source ?? null;
+    } else {
+      forecast = raw;
+    }
+  }
 
   // Compute per-rack profit summary
   const rackMap: Record<string, { original: number; optimized: number; products: number }> = {};
@@ -90,7 +102,19 @@ router.get('/results', (req: Request, res: Response) => {
     rackMap[rack].products += 1;
   });
 
-  res.json({ products, forecast, rackSummary: rackMap });
+  // Optional per-product explanations (see mlops/utils/explainability.py).
+  // Missing file just means an older run — return null and let the UI hide
+  // the explanation panel.
+  let explanations: unknown = null;
+  if (fs.existsSync(explanationsPath)) {
+    try {
+      explanations = JSON.parse(fs.readFileSync(explanationsPath, 'utf-8'));
+    } catch {
+      explanations = null;
+    }
+  }
+
+  res.json({ products, forecast, forecastSource, rackSummary: rackMap, explanations });
 });
 
 // GET /api/predict/list — list all available prediction result months

@@ -1,4 +1,4 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+export const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export const api = {
   // Upload
@@ -47,6 +47,21 @@ export const api = {
     fetch(`${BASE}/api/predict/results?month=${month}`).then((r) => r.json()),
   predictList: () =>
     fetch(`${BASE}/api/predict/list`).then((r) => r.json()),
+
+  // Optimize — unified upload → ingest → predict flow
+  optimizeStatus: () =>
+    fetch(`${BASE}/api/optimize/status`).then((r) => r.json()),
+  optimizeDefaultMonth: () =>
+    fetch(`${BASE}/api/optimize/default-month`).then((r) => r.json()),
+  optimizeStreamUrl: (month: string, dryRun?: boolean) => {
+    const p = new URLSearchParams({ month });
+    if (dryRun) p.set("dryRun", "true");
+    return `${BASE}/api/optimize/run?${p}`;
+  },
+  optimizeStop: () =>
+    fetch(`${BASE}/api/optimize/stop`, { method: "POST" }).then((r) => r.json()),
+  optimizeResults: (month: string) =>
+    fetch(`${BASE}/api/optimize/results?month=${month}`).then((r) => r.json()),
 
   // Static result files
   resultUrl: (filename: string) => `${BASE}/results/${filename}`,

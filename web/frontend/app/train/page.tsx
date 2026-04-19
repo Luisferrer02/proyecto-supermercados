@@ -10,6 +10,9 @@ import { api } from "@/lib/api";
 
 interface ModelResult {
   mse?: number;
+  mse_eur2?: number;
+  rmse_eur?: number;
+  mae_eur?: number;
   original_profit?: number;
   optimized_profit?: number;
 }
@@ -110,7 +113,12 @@ export default function TrainPage() {
           {/* MSE chart */}
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle className="text-sm">Test MSE (lower is better)</CardTitle>
+              <CardTitle className="text-sm">
+                Error de predicción por modelo
+                <span className="text-xs font-normal text-muted-foreground block mt-0.5">
+                  MSE en €² — cuanto menor, más preciso
+                </span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={160}>
@@ -134,29 +142,40 @@ export default function TrainPage() {
                 <thead>
                   <tr className="border-b border-border text-muted-foreground text-xs">
                     <th className="text-left pb-2">Model</th>
-                    <th className="text-right pb-2">MSE</th>
+                    <th className="text-right pb-2" title="Mean Squared Error in €²">MSE (€²)</th>
+                    <th className="text-right pb-2" title="Root Mean Squared Error: error típico en €">RMSE (€)</th>
                     <th className="text-right pb-2">Original €</th>
                     <th className="text-right pb-2">Optimized €</th>
                     <th className="text-right pb-2">Lift</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(results).map(([model, m]) => {
-                    const lift = (m.optimized_profit ?? 0) - (m.original_profit ?? 0);
-                    return (
-                      <tr key={model} className="border-b border-border last:border-0">
-                        <td className="py-2 font-medium">{model}</td>
-                        <td className="text-right text-muted-foreground">{m.mse != null ? m.mse.toFixed(1) : "—"}</td>
-                        <td className="text-right">€{m.original_profit?.toLocaleString() ?? "—"}</td>
-                        <td className="text-right">€{m.optimized_profit?.toLocaleString() ?? "—"}</td>
-                        <td className={`text-right font-semibold ${lift >= 0 ? "text-green-600" : "text-red-600"}`}>
-                          {lift >= 0 ? "+" : ""}€{lift.toLocaleString()}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {Object.entries(results)
+                    .filter(([model]) => !model.startsWith("_"))
+                    .map(([model, m]) => {
+                      const lift = (m.optimized_profit ?? 0) - (m.original_profit ?? 0);
+                      const mse = m.mse_eur2 ?? m.mse;
+                      const rmse = m.rmse_eur ?? (mse != null ? Math.sqrt(mse) : null);
+                      return (
+                        <tr key={model} className="border-b border-border last:border-0">
+                          <td className="py-2 font-medium">{model}</td>
+                          <td className="text-right text-muted-foreground">{mse != null ? mse.toFixed(1) : "—"}</td>
+                          <td className="text-right text-muted-foreground">{rmse != null ? rmse.toFixed(2) : "—"}</td>
+                          <td className="text-right">€{m.original_profit?.toLocaleString() ?? "—"}</td>
+                          <td className="text-right">€{m.optimized_profit?.toLocaleString() ?? "—"}</td>
+                          <td className={`text-right font-semibold ${lift >= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {lift >= 0 ? "+" : ""}€{lift.toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
+              <p className="text-xs text-muted-foreground mt-3">
+                MSE en €² (errores al cuadrado); RMSE en € es el error típico interpretable por producto.
+                Los baselines de predicción (Identity = predice 0; Random = ruido gaussiano) se guardan en{" "}
+                <code className="bg-muted px-1 rounded text-[11px]">training_results.json</code>.
+              </p>
             </CardContent>
           </Card>
         </div>

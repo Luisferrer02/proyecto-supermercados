@@ -13,10 +13,10 @@ interface ChartInfo {
 }
 
 const CHART_LABELS: Record<string, string> = {
-  "mse_comparison.png": "Test MSE Comparison",
-  "profit_comparison.png": "Profit Optimization Comparison",
-  "rack_comparison.png": "Per-Rack Profit Deltas",
-  "alluvial_diagram.png": "Shelf Movement Alluvial",
+  "mse_comparison.png": "Precisión de los modelos (error típico)",
+  "profit_comparison.png": "Beneficio optimizado por modelo",
+  "rack_comparison.png": "Mejora por estantería",
+  "alluvial_diagram.png": "Movimiento de productos entre baldas",
 };
 
 export default function EvaluatePage() {
