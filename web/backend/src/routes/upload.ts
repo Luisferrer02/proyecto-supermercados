@@ -11,11 +11,20 @@ const PYTHON = process.env.PYTHON_PATH || 'python3';
 // Runs utils/csv_schema.py on the given path and returns a structured report.
 // Uses the venv python if available; works on mac/linux (bash) and gracefully
 // degrades on windows where the activate script does not exist.
+function findVenvActivate(mlopsDir: string): string {
+  const candidates = [
+    process.env.VENV_DIR ? path.join(process.env.VENV_DIR, 'bin', 'activate') : '',
+    path.join(mlopsDir, 'venv-new', 'bin', 'activate'),
+    path.join(mlopsDir, 'venv', 'bin', 'activate'),
+  ].filter(Boolean);
+  return candidates.find(p => fs.existsSync(p)) ?? '';
+}
+
 function runValidator(target: string): Promise<{ ok: boolean; output: string }> {
   return new Promise((resolve) => {
     const mlopsDir = process.env.MLOPS_DIR!;
-    const venvActivate = path.join(mlopsDir, 'venv', 'bin', 'activate');
-    const useBash = fs.existsSync(venvActivate);
+    const venvActivate = findVenvActivate(mlopsDir);
+    const useBash = !!venvActivate;
 
     let proc;
     if (useBash) {
@@ -56,17 +65,23 @@ const upload = multer({
 });
 
 // POST /api/upload — upload one or more CSV files
-router.post('/', upload.array('files'), async (req: Request, res: Response) => {
-  const files = req.files as Express.Multer.File[];
+router.post('/', (req: Request, res: Response) => {
+  upload.array('files')(req, res, async (err) => {
+    if (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    const files = (req.files as Express.Multer.File[]) || [];
 
-  // Validate each uploaded file's schema. Invalid files stay on disk so the
-  // user can inspect them, but they are flagged in the response.
-  const uploaded = await Promise.all(files.map(async (f) => {
-    const { ok, output } = await runValidator(path.join(monthlyDir(), f.filename));
-    return { name: f.filename, size: f.size, valid: ok, report: output };
-  }));
+    // Validate each uploaded file's schema. Invalid files stay on disk so
+    // the user can inspect them, but they are flagged in the response.
+    const uploaded = await Promise.all(files.map(async (f) => {
+      const { ok, output } = await runValidator(path.join(monthlyDir(), f.filename));
+      return { name: f.filename, size: f.size, valid: ok, report: output };
+    }));
 
-  res.json({ uploaded });
+    res.json({ uploaded });
+  });
 });
 
 // POST /api/upload/validate — validate all CSVs currently in data/monthly/
@@ -90,13 +105,26 @@ router.get('/files', (_req: Request, res: Response) => {
 
 // DELETE /api/upload/files/:name — delete a specific file
 router.delete('/files/:name', (req: Request, res: Response) => {
-  const filePath = path.join(monthlyDir(), req.params.name);
+  const name = req.params.name;
+  // Reject any path separators / traversal segments / NUL bytes.
+  // Filenames are validated again by matching the same pattern multer enforces.
+  if (!/^sales_[A-Za-z0-9._-]+\.csv$/.test(name)) {
+    res.status(400).json({ error: 'Invalid filename' });
+    return;
+  }
+  const dir = monthlyDir();
+  const filePath = path.resolve(dir, name);
+  // Ensure resolved path is still inside dir (defense in depth).
+  if (!filePath.startsWith(path.resolve(dir) + path.sep)) {
+    res.status(400).json({ error: 'Invalid filename' });
+    return;
+  }
   if (!fs.existsSync(filePath)) {
     res.status(404).json({ error: 'File not found' });
     return;
   }
   fs.unlinkSync(filePath);
-  res.json({ deleted: req.params.name });
+  res.json({ deleted: name });
 });
 
 export { router as uploadRouter };

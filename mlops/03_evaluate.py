@@ -23,9 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from utils.retail_physics import (
     compute_rack_profit,
     optimize_rack_greedy,
-    get_shelf_multiplier,
     NUM_SHELVES,
-    SHELF_WIDTH_CM,
 )
 
 # ---------------------------------------------------------------------------
@@ -366,7 +364,6 @@ def visualize_alluvial(df: pd.DataFrame):
     Each flow is a product moving between shelves. Flow width proportional
     to count of items making this transition. Product names inside flows.
     """
-    from matplotlib.patches import FancyArrowPatch
     from matplotlib.path import Path as MplPath
     import matplotlib.patches as mpatches
 
@@ -424,8 +421,6 @@ def visualize_alluvial(df: pd.DataFrame):
 
     # Compute stacking positions for left and right
     # Each shelf has a vertical extent based on how many products it holds
-    total_products = len(products)
-    shelf_height_unit = NUM_SHELVES / (total_products + NUM_SHELVES)  # spacing
 
     def build_shelf_positions(shelf_counts):
         """Compute y-start/y-end for each shelf bar based on product count."""

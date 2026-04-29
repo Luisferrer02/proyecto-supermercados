@@ -23,13 +23,13 @@ SHELF_WIDTH_CM = 300.0
 NUM_SHELVES = 7
 
 SHELF_MULTIPLIERS: Dict[int, float] = {
-    1: 0.7,   # Bottom
-    2: 0.7,   # Bottom
-    3: 1.2,   # Eye level
-    4: 1.2,   # Eye level
-    5: 1.2,   # Eye level
-    6: 0.8,   # Top
-    7: 0.8,   # Top
+    1: 0.60,   # Floor
+    2: 0.80,   # Low
+    3: 0.95,   # Below eye
+    4: 1.15,   # Eye level (peak)
+    5: 1.00,   # Above eye
+    6: 0.75,   # High
+    7: 0.50,   # Top
 }
 
 

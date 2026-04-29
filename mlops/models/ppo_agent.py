@@ -11,14 +11,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from typing import Tuple, List, Dict
+from typing import Tuple, List
 
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from utils.retail_physics import (
     compute_product_profit,
-    get_shelf_multiplier,
-    SHELF_WIDTH_CM,
     NUM_SHELVES,
 )
 

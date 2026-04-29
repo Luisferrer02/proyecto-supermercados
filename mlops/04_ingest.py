@@ -110,7 +110,7 @@ def run_embedding_thread(csv_dir: Path, tracker: ProgressTracker):
             )
 
         tracker.update_embedding("running", "Scanning CSV files…")
-        results = kb.ingest_directory(csv_dir, callback=on_progress)
+        kb.ingest_directory(csv_dir, callback=on_progress)
 
         stats = kb.stats()
         tracker.update_embedding(

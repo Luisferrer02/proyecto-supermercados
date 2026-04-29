@@ -25,7 +25,6 @@ import argparse
 import json
 import os
 import re
-import random
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -139,6 +138,34 @@ def _get_seasonal_mult(month: int, category: str) -> float:
     return factors.get("default", 1.0)
 
 
+# (keywords, margin_range, width_range). First match wins.
+_CATEGORY_PROFILES: list = [
+    (["fruta", "verdura", "lechuga"],                              (25, 45), (8, 25)),
+    (["pescado", "marisco", "salaz"],                              (20, 40), (10, 30)),
+    (["cerdo", "pollo", "vacuno", "cordero", "ave", "carne", "hamburguesa"],
+                                                                   (15, 35), (12, 28)),
+    (["chocolate", "galleta", "cereal", "turrón", "bollería"],     (30, 55), (5, 20)),
+    (["leche", "yogur", "queso", "mantequilla"],                   (20, 40), (6, 18)),
+    (["cerveza", "vino", "licor", "agua", "refres", "zumo"],       (25, 50), (6, 12)),
+    (["higiene", "cuidado", "gel", "champu", "desodorante", "jabón"],
+                                                                   (35, 60), (4, 10)),
+    (["perfume", "colonia", "maquillaje", "labio", "ojo"],         (40, 70), (3, 8)),
+    (["conserva", "atún", "aceite", "vinagre"],                    (25, 45), (5, 15)),
+    (["pasta", "arroz", "legumbre", "harina"],                     (20, 40), (6, 15)),
+    (["congelad", "hielo"],                                        (25, 45), (8, 22)),
+    (["pan", "pico", "tostada"],                                   (30, 50), (8, 20)),
+    (["jamón", "embutido", "bacón", "chopped", "mortadela"],       (25, 45), (8, 18)),
+]
+_DEFAULT_PROFILE = ((20, 50), (5, 20))
+
+
+def _profile_for(category: str):
+    for keywords, margin_range, width_range in _CATEGORY_PROFILES:
+        if any(k in category for k in keywords):
+            return margin_range, width_range
+    return _DEFAULT_PROFILE
+
+
 def generate_sales_data(row: pd.Series, rng: np.random.RandomState,
                         month: int) -> dict:
     """
@@ -148,67 +175,18 @@ def generate_sales_data(row: pd.Series, rng: np.random.RandomState,
     price = row["price_numeric"]
     category = _category_key(row["Category"])
 
-    # --- Base sales: cheaper products sell more ---
     base_sales = max(10, int(300 / (price + 0.1)))
-    # Add random noise (±30%)
     noise = rng.uniform(0.7, 1.3)
     sales = int(base_sales * noise)
 
-    # Apply seasonal multiplier
     seasonal_mult = _get_seasonal_mult(month, row["Category"])
     sales = max(1, int(sales * seasonal_mult))
 
-    # --- Profit margin by category group ---
-    if any(k in category for k in ["fruta", "verdura", "lechuga"]):
-        margin = round(rng.uniform(25, 45), 1)
-        width = round(rng.uniform(8, 25), 1)
-    elif any(k in category for k in ["pescado", "marisco", "salaz"]):
-        margin = round(rng.uniform(20, 40), 1)
-        width = round(rng.uniform(10, 30), 1)
-    elif any(k in category for k in ["cerdo", "pollo", "vacuno", "cordero",
-                                      "ave", "carne", "hamburguesa"]):
-        margin = round(rng.uniform(15, 35), 1)
-        width = round(rng.uniform(12, 28), 1)
-    elif any(k in category for k in ["chocolate", "galleta", "cereal",
-                                      "turrón", "bollería"]):
-        margin = round(rng.uniform(30, 55), 1)
-        width = round(rng.uniform(5, 20), 1)
-    elif any(k in category for k in ["leche", "yogur", "queso", "mantequilla"]):
-        margin = round(rng.uniform(20, 40), 1)
-        width = round(rng.uniform(6, 18), 1)
-    elif any(k in category for k in ["cerveza", "vino", "licor", "agua",
-                                      "refres", "zumo"]):
-        margin = round(rng.uniform(25, 50), 1)
-        width = round(rng.uniform(6, 12), 1)
-    elif any(k in category for k in ["higiene", "cuidado", "gel", "champu",
-                                      "desodorante", "jabón"]):
-        margin = round(rng.uniform(35, 60), 1)
-        width = round(rng.uniform(4, 10), 1)
-    elif any(k in category for k in ["perfume", "colonia", "maquillaje",
-                                      "labio", "ojo"]):
-        margin = round(rng.uniform(40, 70), 1)
-        width = round(rng.uniform(3, 8), 1)
-    elif any(k in category for k in ["conserva", "atún", "aceite", "vinagre"]):
-        margin = round(rng.uniform(25, 45), 1)
-        width = round(rng.uniform(5, 15), 1)
-    elif any(k in category for k in ["pasta", "arroz", "legumbre", "harina"]):
-        margin = round(rng.uniform(20, 40), 1)
-        width = round(rng.uniform(6, 15), 1)
-    elif any(k in category for k in ["congelad", "hielo"]):
-        margin = round(rng.uniform(25, 45), 1)
-        width = round(rng.uniform(8, 22), 1)
-    elif any(k in category for k in ["pan", "pico", "tostada"]):
-        margin = round(rng.uniform(30, 50), 1)
-        width = round(rng.uniform(8, 20), 1)
-    elif any(k in category for k in ["jamón", "embutido", "bacón",
-                                      "chopped", "mortadela"]):
-        margin = round(rng.uniform(25, 45), 1)
-        width = round(rng.uniform(8, 18), 1)
-    else:
-        margin = round(rng.uniform(20, 50), 1)
-        width = round(rng.uniform(5, 20), 1)
+    margin_range, width_range = _profile_for(category)
+    margin = round(rng.uniform(*margin_range), 1)
+    width = round(rng.uniform(*width_range), 1)
 
-    # Add slight month-to-month noise to margin (±5%)
+    # ±5% month-to-month noise on margin
     margin = round(margin * rng.uniform(0.95, 1.05), 1)
 
     return {
@@ -366,6 +344,24 @@ def enforce_shelf_constraint(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 def main():
+    args = _parse_args()
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    df_all = _load_catalogue(Path(args.input))
+    client = _setup_llm_client(args)
+
+    for year, month, month_name in MONTHS:
+        _generate_month(args, df_all, output_dir, client, year, month, month_name)
+
+    print(f"\nDone. Generated {len(MONTHS)} monthly datasets in {output_dir}/")
+    print("   Files:")
+    for year, month, month_name in MONTHS:
+        filename = f"sales_{year}_{month:02d}_{month_name}.csv"
+        print(f"     {filename}")
+
+
+def _parse_args():
     parser = argparse.ArgumentParser(
         description="Generate 12 monthly sales datasets (Jan-Dec 2025)")
     parser.add_argument("--input", type=str, default=str(DEFAULT_INPUT),
@@ -383,164 +379,139 @@ def main():
                              "(requires OPENROUTER_API_KEY)")
     parser.add_argument("--skip-existing", action="store_true",
                         help="Skip months that already have a CSV file")
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    input_path = Path(args.input)
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Load base catalogue
+def _load_catalogue(input_path: Path) -> pd.DataFrame:
     print(f"Loading {input_path}...")
     df_all = pd.read_csv(input_path)
     print(f"   {len(df_all)} products loaded, "
           f"{df_all['Category'].nunique()} categories")
-
-    # 2. Parse prices once
     df_all["price_numeric"] = df_all["price"].apply(parse_eur_price)
     df_all["discount_price_numeric"] = df_all["discount_price"].apply(parse_eur_price)
+    return df_all
 
-    master_rng = np.random.RandomState(args.seed)
 
-    # Set up LLM client if requested
-    client = None
-    if args.use_llm:
-        try:
-            from openai import OpenAI
-        except ImportError:
-            print("ERROR: Install openai package: pip install openai")
-            sys.exit(1)
-        api_key = os.getenv("OPENROUTER_API_KEY")
-        if not api_key:
-            print("ERROR: Set OPENROUTER_API_KEY in your .env or environment.")
-            sys.exit(1)
-        client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=api_key,
-            timeout=30,
-        )
-        print("LLM mode enabled (OpenRouter API)")
-    else:
+def _setup_llm_client(args):
+    if not args.use_llm:
         print("Heuristic mode (no API calls)")
+        return None
+    try:
+        from openai import OpenAI
+    except ImportError:
+        print("ERROR: Install openai package: pip install openai")
+        sys.exit(1)
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        print("ERROR: Set OPENROUTER_API_KEY in your .env or environment.")
+        sys.exit(1)
+    print("LLM mode enabled (OpenRouter API)")
+    return OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,
+        timeout=30,
+    )
 
-    # 3. Generate one CSV per month
-    for year, month, month_name in MONTHS:
-        print(f"\n{'='*60}")
-        print(f"Generating {month_name.capitalize()} {year}...")
-        print(f"{'='*60}")
 
-        # Skip if file already exists
-        filename = f"sales_{year}_{month:02d}_{month_name}.csv"
-        out_path = output_dir / filename
-        if args.skip_existing and out_path.exists():
-            print(f"   Skipping (already exists: {filename})")
-            continue
+def _generate_month(args, df_all, output_dir, client, year, month, month_name):
+    print(f"\n{'='*60}")
+    print(f"Generating {month_name.capitalize()} {year}...")
+    print(f"{'='*60}")
 
-        # Seed for this month (deterministic but different each month)
-        month_seed = args.seed + year * 100 + month
-        rng = np.random.RandomState(month_seed)
+    filename = f"sales_{year}_{month:02d}_{month_name}.csv"
+    out_path = output_dir / filename
+    if args.skip_existing and out_path.exists():
+        print(f"   Skipping (already exists: {filename})")
+        return
 
-        # Random subset: 60-90% of products
-        pct = rng.uniform(args.min_pct, args.max_pct)
-        n_products = max(10, int(len(df_all) * pct))
-        sample_idx = rng.choice(df_all.index, size=n_products, replace=False)
-        df_month = df_all.loc[sorted(sample_idx)].copy().reset_index(drop=True)
-        print(f"   Selected {len(df_month)} / {len(df_all)} products ({pct:.0%})")
+    month_seed = args.seed + year * 100 + month
+    rng = np.random.RandomState(month_seed)
 
-        # Generate sales data
-        if args.use_llm and client is not None:
-            # ---- LLM mode: batch API calls ----
-            aug_cols = ["estimated_monthly_sales", "profit_margin_percentage",
-                        "product_width_cm"]
-            for c in aug_cols:
-                df_month[c] = 0.0
+    df_month = _sample_products(df_all, rng, args.min_pct, args.max_pct)
 
-            n_batches = (len(df_month) + BATCH_SIZE - 1) // BATCH_SIZE
-            max_workers = 4  # parallel API calls
+    if args.use_llm and client is not None:
+        _augment_via_llm(df_month, client, rng, month, year)
+    else:
+        _augment_via_heuristic(df_month, rng, month)
 
-            def process_batch(b):
-                """Process a single batch — called from thread pool."""
-                start = b * BATCH_SIZE
-                end = min(start + BATCH_SIZE, len(df_month))
-                batch = df_month.iloc[start:end]
-                results = llm_augment_batch(batch, client, month, year)
-                return b, start, end, results
+    df_month = assign_shelves(df_month, rng)
+    df_month = enforce_shelf_constraint(df_month)
 
-            try:
-                completed = 0
-                for chunk_start in range(0, n_batches, max_workers):
-                    chunk_end = min(chunk_start + max_workers, n_batches)
-                    batch_indices = list(range(chunk_start, chunk_end))
+    final_cols = [
+        "Category", "name", "subtitle", "price", "discount_price",
+        "price_numeric", "discount_price_numeric",
+        "estimated_monthly_sales", "profit_margin_percentage",
+        "product_width_cm", "rack_id", "shelf_level",
+    ]
+    df_month = df_month[final_cols]
+    df_month.to_csv(out_path, index=False)
 
-                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                        futures = {
-                            executor.submit(process_batch, b): b
-                            for b in batch_indices
-                        }
+    print(f"   Saved -> {out_path}")
+    print(f"   Products:     {len(df_month)}")
+    print(f"   Categories:   {df_month['Category'].nunique()}")
+    print(f"   Avg sales:    {df_month['estimated_monthly_sales'].mean():.0f}")
+    print(f"   Avg margin:   {df_month['profit_margin_percentage'].mean():.1f}%")
+    print(f"   Avg width:    {df_month['product_width_cm'].mean():.1f} cm")
 
-                        for future in as_completed(futures):
-                            b, start, end, results = future.result()
-                            for i, res in enumerate(results):
-                                idx = df_month.index[start + i]
-                                for k, v in res.items():
-                                    df_month.at[idx, k] = v
-                            completed += 1
-                            print(f"   Batch {completed}/{n_batches} "
-                                  f"(products {start+1}-{end}) ... OK")
 
-                    time.sleep(1)  # brief pause between parallel chunks
+def _sample_products(df_all, rng, min_pct, max_pct):
+    pct = rng.uniform(min_pct, max_pct)
+    n_products = max(10, int(len(df_all) * pct))
+    sample_idx = rng.choice(df_all.index, size=n_products, replace=False)
+    df_month = df_all.loc[sorted(sample_idx)].copy().reset_index(drop=True)
+    print(f"   Selected {len(df_month)} / {len(df_all)} products ({pct:.0%})")
+    return df_month
 
-            except KeyboardInterrupt:
-                print(f"\n\nWARNING: Interrupted at batch {completed}/{n_batches}. "
-                      f"Filling remaining with heuristics...")
-                # Fill remaining products with heuristic data
-                for idx in df_month.index:
-                    if df_month.at[idx, "estimated_monthly_sales"] == 0:
-                        aug = generate_sales_data(df_month.loc[idx], rng, month)
-                        for k, v in aug.items():
+
+def _augment_via_heuristic(df_month, rng, month):
+    aug_records = [generate_sales_data(df_month.loc[idx], rng, month)
+                   for idx in df_month.index]
+    aug_df = pd.DataFrame(aug_records)
+    for col in aug_df.columns:
+        df_month[col] = aug_df[col].values
+
+
+def _augment_via_llm(df_month, client, rng, month, year):
+    aug_cols = ["estimated_monthly_sales", "profit_margin_percentage",
+                "product_width_cm"]
+    for c in aug_cols:
+        df_month[c] = 0.0
+
+    n_batches = (len(df_month) + BATCH_SIZE - 1) // BATCH_SIZE
+    max_workers = 4
+
+    def process_batch(b):
+        start = b * BATCH_SIZE
+        end = min(start + BATCH_SIZE, len(df_month))
+        batch = df_month.iloc[start:end]
+        results = llm_augment_batch(batch, client, month, year)
+        return b, start, end, results
+
+    completed = 0
+    try:
+        for chunk_start in range(0, n_batches, max_workers):
+            chunk_end = min(chunk_start + max_workers, n_batches)
+            batch_indices = list(range(chunk_start, chunk_end))
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = {executor.submit(process_batch, b): b for b in batch_indices}
+                for future in as_completed(futures):
+                    _, start, end, results = future.result()
+                    for i, res in enumerate(results):
+                        idx = df_month.index[start + i]
+                        for k, v in res.items():
                             df_month.at[idx, k] = v
-        else:
-            # ---- Heuristic mode: local generation ----
-            aug_records = []
-            for idx in df_month.index:
+                    completed += 1
+                    print(f"   Batch {completed}/{n_batches} "
+                          f"(products {start+1}-{end}) ... OK")
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print(f"\n\nWARNING: Interrupted at batch {completed}/{n_batches}. "
+              f"Filling remaining with heuristics...")
+        for idx in df_month.index:
+            if df_month.at[idx, "estimated_monthly_sales"] == 0:
                 aug = generate_sales_data(df_month.loc[idx], rng, month)
-                aug_records.append(aug)
-            aug_df = pd.DataFrame(aug_records)
-            for col in aug_df.columns:
-                df_month[col] = aug_df[col].values
-
-        # Assign racks and shelves
-        df_month = assign_shelves(df_month, rng)
-
-        # Enforce 300cm constraint
-        df_month = enforce_shelf_constraint(df_month)
-
-        # Select and order final columns
-        final_cols = [
-            "Category", "name", "subtitle", "price", "discount_price",
-            "price_numeric", "discount_price_numeric",
-            "estimated_monthly_sales", "profit_margin_percentage",
-            "product_width_cm", "rack_id", "shelf_level",
-        ]
-        df_month = df_month[final_cols]
-
-        # Save
-        filename = f"sales_{year}_{month:02d}_{month_name}.csv"
-        out_path = output_dir / filename
-        df_month.to_csv(out_path, index=False)
-
-        # Stats
-        print(f"   Saved -> {out_path}")
-        print(f"   Products:     {len(df_month)}")
-        print(f"   Categories:   {df_month['Category'].nunique()}")
-        print(f"   Avg sales:    {df_month['estimated_monthly_sales'].mean():.0f}")
-        print(f"   Avg margin:   {df_month['profit_margin_percentage'].mean():.1f}%")
-        print(f"   Avg width:    {df_month['product_width_cm'].mean():.1f} cm")
-
-    print(f"\nDone. Generated {len(MONTHS)} monthly datasets in {output_dir}/")
-    print("   Files:")
-    for year, month, month_name in MONTHS:
-        filename = f"sales_{year}_{month:02d}_{month_name}.csv"
-        print(f"     {filename}")
+                for k, v in aug.items():
+                    df_month.at[idx, k] = v
 
 
 if __name__ == "__main__":

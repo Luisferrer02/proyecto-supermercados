@@ -188,7 +188,7 @@ No markdown, no explanation, just the JSON array."""
                         continue
                     else:
                         if current_model != models_to_try[-1]:
-                            print(f"\n     🔄 Switching to fallback model …", end="")
+                            print("\n     🔄 Switching to fallback model …", end="")
                             break  # try next model
                         # else fall through to defaults
                 else:

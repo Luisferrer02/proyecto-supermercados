@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { runPythonChainWithSSE, isRunning, killProcess } from '../services/pythonRunner';
+import { parseCsv } from '../services/csv';
 
 const router = Router();
 
@@ -157,20 +158,6 @@ function newestMonthlyCsv(upTo?: [number, number]): Record<string, string>[] {
   return parseCsv(fs.readFileSync(path.join(dir, pick.name), 'utf-8'));
 }
 
-function parseCsv(text: string): Record<string, string>[] {
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) return [];
-  const headers = lines[0].split(',').map(h => h.trim());
-  return lines.slice(1).map(line => {
-    const values = line.match(/(".*?"|[^,]+)(?=,|$)/g) || line.split(',');
-    const rec: Record<string, string> = {};
-    headers.forEach((h, i) => {
-      rec[h] = (values[i] || '').replace(/^"|"$/g, '').trim();
-    });
-    return rec;
-  });
-}
-
 interface Movement { from: number; to: number; count: number; }
 interface Kpi {
   profitOriginal: number;
@@ -189,14 +176,27 @@ interface RackRow {
   lift: number;
 }
 
+// Mirrors mlops/utils/retail_physics.py SHELF_MULTIPLIERS.
+const SHELF_MULTIPLIERS: Record<number, number> = {
+  1: 0.60,   // floor
+  2: 0.80,   // low
+  3: 0.95,   // below eye
+  4: 1.15,   // eye level (peak)
+  5: 1.00,   // above eye
+  6: 0.75,   // high
+  7: 0.50,   // top
+};
+
+function shelfMultiplier(shelf: number): number {
+  return SHELF_MULTIPLIERS[shelf] ?? 0.60;
+}
+
 function productProfit(row: Record<string, string>): number {
   const price = parseFloat(row.price_numeric || row.price || '0') || 0;
   const margin = (parseFloat(row.profit_margin_percentage || '0') || 0) / 100;
   const sales = parseFloat(row.estimated_monthly_sales || '0') || 0;
   const shelf = parseInt(row.shelf_level || '1', 10) || 1;
-  // Same shelf multipliers as retail_physics.py
-  const mult = [3, 4, 5].includes(shelf) ? 1.2 : 0.7;
-  return price * margin * sales * mult;
+  return price * margin * sales * shelfMultiplier(shelf);
 }
 
 function aggregate(

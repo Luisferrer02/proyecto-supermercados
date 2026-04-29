@@ -6,6 +6,16 @@ import fs from 'fs';
 const MLOPS_DIR = process.env.MLOPS_DIR!;
 const PYTHON = process.env.PYTHON_PATH || 'python3';
 
+// Pick the first venv activate script that actually exists. Override via VENV_DIR.
+function resolveVenvActivate(): string {
+  const candidates = [
+    process.env.VENV_DIR ? path.join(process.env.VENV_DIR, 'bin', 'activate') : '',
+    path.join(MLOPS_DIR, 'venv-new', 'bin', 'activate'),
+    path.join(MLOPS_DIR, 'venv', 'bin', 'activate'),
+  ].filter(Boolean);
+  return candidates.find(p => fs.existsSync(p)) ?? '';
+}
+
 // Track running processes to prevent duplicate runs
 const running: Record<string, ChildProcess> = {};
 
@@ -62,7 +72,7 @@ export async function runPythonChainWithSSE(
 
     const exitCode = await new Promise<number>((resolve) => {
       const scriptPath = path.join(MLOPS_DIR, step.script);
-      const venvActivate = path.join(MLOPS_DIR, 'venv', 'bin', 'activate');
+      const venvActivate = resolveVenvActivate();
       let proc: ChildProcess;
       if (fs.existsSync(venvActivate)) {
         const quotedArgs = [scriptPath, ...step.args]

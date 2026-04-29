@@ -9,11 +9,9 @@ Uses sentence-transformers for embedding and ChromaDB for storage.
 """
 
 import re
-import json
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 
 # ---------------------------------------------------------------------------

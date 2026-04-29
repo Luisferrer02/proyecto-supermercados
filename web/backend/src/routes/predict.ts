@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { runPythonWithSSE, isRunning, killProcess } from '../services/pythonRunner';
+import { parseCsv } from '../services/csv';
 
 const router = Router();
 
@@ -59,19 +60,7 @@ router.get('/results', (req: Request, res: Response) => {
     return;
   }
 
-  // Parse CSV → JSON
-  const csvText = fs.readFileSync(csvPath, 'utf-8');
-  const lines = csvText.trim().split('\n');
-  const headers = lines[0].split(',').map(h => h.trim());
-  const products = lines.slice(1).map(line => {
-    // Handle quoted fields with commas inside
-    const values = line.match(/(".*?"|[^,]+)(?=,|$)/g) || line.split(',');
-    const record: Record<string, string> = {};
-    headers.forEach((h, i) => {
-      record[h] = (values[i] || '').replace(/^"|"$/g, '').trim();
-    });
-    return record;
-  });
+  const products = parseCsv(fs.readFileSync(csvPath, 'utf-8'));
 
   // Forecast JSON comes in two shapes depending on the version of
   // 05_predict.py that produced it. Normalize to a flat { category: mult }
@@ -88,6 +77,11 @@ router.get('/results', (req: Request, res: Response) => {
     }
   }
 
+  // Mirrors mlops/utils/retail_physics.py SHELF_MULTIPLIERS.
+  const SHELF_MULTIPLIERS: Record<number, number> = {
+    1: 0.60, 2: 0.80, 3: 0.95, 4: 1.15, 5: 1.00, 6: 0.75, 7: 0.50,
+  };
+
   // Compute per-rack profit summary
   const rackMap: Record<string, { original: number; optimized: number; products: number }> = {};
   products.forEach(p => {
@@ -96,7 +90,8 @@ router.get('/results', (req: Request, res: Response) => {
     const price = parseFloat(p.price_numeric || p.price || '0');
     const margin = parseFloat(p.profit_margin_percentage || '0') / 100;
     const sales = parseFloat(p.estimated_monthly_sales || '0');
-    const shelfMult = [3, 4, 5].includes(parseInt(p.shelf_level || '1')) ? 1.2 : 0.8;
+    const shelf = parseInt(p.shelf_level || '1');
+    const shelfMult = SHELF_MULTIPLIERS[shelf] ?? 0.60;
     rackMap[rack].optimized += price * margin * sales * shelfMult;
     rackMap[rack].original += price * margin * sales * 0.95; // baseline approximation
     rackMap[rack].products += 1;

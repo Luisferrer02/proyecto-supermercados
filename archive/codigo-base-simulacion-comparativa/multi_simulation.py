@@ -161,24 +161,24 @@ for name, count in name_counts.most_common():
     bar = "#" * count
     print(f"    {name:<25} {count:>2}/10  {bar}")
 
-print(f"\n  Category frequency:")
+print("\n  Category frequency:")
 cat_counts = Counter(top_df["category"])
 for cat, count in cat_counts.most_common():
     print(f"    {cat:<15} {count:>2} appearances")
 
-print(f"\n  Shelf frequency:")
+print("\n  Shelf frequency:")
 shelf_counts = Counter(top_df["shelf_id"])
 for shelf, count in shelf_counts.most_common():
     print(f"    {shelf:<6} {count:>2} appearances")
 
-print(f"\n  Rack level frequency:")
+print("\n  Rack level frequency:")
 rack_counts = Counter(top_df["rack_level"])
 for rack, count in sorted(rack_counts.items()):
     label = {1: "bottom", 2: "below eye", 3: "eye level", 4: "top"}[rack]
     print(f"    Level {rack} ({label:<10}) {count:>2} appearances")
 
 # B) Average attribute values
-print(f"\n  B) AVERAGE ATTRIBUTES OF TOP PERFORMERS")
+print("\n  B) AVERAGE ATTRIBUTES OF TOP PERFORMERS")
 print("  " + "-" * 55)
 avg_price = top_df["price"].mean()
 avg_margin = top_df["margin"].mean()
@@ -190,7 +190,7 @@ print(f"    Average popularity:   {avg_popularity:.2f}")
 print(f"    Average profit/run:  ${avg_profit:,.2f}")
 
 # C) Pattern identification
-print(f"\n  C) IDENTIFIED PATTERNS")
+print("\n  C) IDENTIFIED PATTERNS")
 print("  " + "-" * 55)
 
 most_common_cat = cat_counts.most_common(1)[0]

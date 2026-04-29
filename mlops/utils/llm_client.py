@@ -106,7 +106,7 @@ def chat_with_failover(
                 )
                 content = response.choices[0].message.content or ""
                 if _looks_empty(content):
-                    logger(f"      ↳ empty response, retrying…")
+                    logger("      ↳ empty response, retrying…")
                     continue
                 logger(f"      ↳ ok ({len(content)} chars)")
                 return content.strip()

@@ -49,7 +49,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import os
 import time
 from collections import deque
 from pathlib import Path

@@ -90,7 +90,7 @@ def validate_csv(path: str | Path) -> ValidationResult:
     result = ValidationResult(path=str(p), ok=False)
 
     if not p.exists():
-        result.errors.append(f"File does not exist")
+        result.errors.append("File does not exist")
         return result
 
     # Filename pattern check (soft — warning only)
@@ -174,7 +174,7 @@ def validate_directory(csv_dir: str | Path) -> List[ValidationResult]:
 def format_report(results: List[ValidationResult]) -> str:
     lines = []
     n_ok = sum(1 for r in results if r.ok)
-    lines.append(f"=== CSV Schema Validation Report ===")
+    lines.append("=== CSV Schema Validation Report ===")
     lines.append(f"Total files: {len(results)}  |  OK: {n_ok}  "
                  f"|  Failed: {len(results) - n_ok}")
     lines.append("")

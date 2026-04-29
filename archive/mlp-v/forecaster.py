@@ -34,7 +34,6 @@ Target: lift_multiplier ∈ (0, ∞), typically [0.5, 2.5]
 
 from __future__ import annotations
 
-import os
 import logging
 from pathlib import Path
 from typing import Optional
@@ -338,8 +337,8 @@ if __name__ == "__main__":
         adjacency_promo=1, product_category=2, base_price=5.99,
         margin_pct=0.35, days_since_restock=1, day_of_week=6, week_of_year=48,
     )
-    print(f"\n── Example Prediction ──────────────────────────")
-    print(f"  Eye-level, 4 facings, end-cap, Sunday, week 48:")
+    print("\n── Example Prediction ──────────────────────────")
+    print("  Eye-level, 4 facings, end-cap, Sunday, week 48:")
     print(f"  Predicted lift multiplier = {lift:.3f}x")
 
     forecaster.save("models/forecaster.ubj")

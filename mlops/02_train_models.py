@@ -18,7 +18,6 @@ Usage:
 
 import argparse
 import json
-import os
 import sys
 import numpy as np
 import pandas as pd
@@ -33,9 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from utils.retail_physics import (
     generate_synthetic_training_data,
     compute_rack_profit,
-    compute_rack_profit_advanced,
     optimize_rack_greedy,
-    get_shelf_multiplier,
     SHELF_WIDTH_CM,
     NUM_SHELVES,
 )

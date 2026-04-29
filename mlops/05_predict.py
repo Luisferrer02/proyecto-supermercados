@@ -19,7 +19,6 @@ import json
 import os
 import re
 import sys
-import time
 from pathlib import Path
 from typing import Optional
 
@@ -108,7 +107,6 @@ def build_forecast_prompt(target_year: int, target_month: int,
     context_sections = []
     for month_key, data in sorted(context.items()):
         docs = data["documents"]
-        meta = data["metadatas"]
         section = f"### Data from {month_key}\n"
         for doc in docs:
             section += f"- {doc}\n"
@@ -569,14 +567,14 @@ def main():
     print("=" * 65)
 
     # Step 1: RAG Retrieval
-    print(f"\n  Step 1: Retrieving historical context...")
+    print("\n  Step 1: Retrieving historical context...")
     context = retrieve_context(target_year, target_month, args.category)
 
     if not context:
         print("   No context available. Continuing with heuristics only.")
 
     # Step 2: Load base product data (most recent month)
-    print(f"\n  Step 2: Loading base product data...")
+    print("\n  Step 2: Loading base product data...")
     from utils.knowledge_base import ShelfKnowledgeBase
     kb = ShelfKnowledgeBase()
     base_df = kb.get_latest_month_data(data_dir, args.category)
@@ -609,13 +607,13 @@ def main():
     if multipliers:
         sorted_mults = sorted(multipliers.items(),
                               key=lambda x: abs(x[1] - 1.0), reverse=True)
-        print(f"\n   Top forecast adjustments:")
+        print("\n   Top forecast adjustments:")
         for cat, mult in sorted_mults[:10]:
             direction = "UP" if mult > 1.0 else "DOWN" if mult < 1.0 else "--"
             print(f"     [{direction}] {cat}: x{mult:.2f}")
 
     # Step 4: Apply forecast
-    print(f"\n  Step 4: Applying forecast to product data...")
+    print("\n  Step 4: Applying forecast to product data...")
     forecasted_df = apply_forecast(base_df, multipliers)
     original_df = base_df.copy()
 
@@ -625,7 +623,7 @@ def main():
           f"{forecasted_df['estimated_monthly_sales'].mean():.0f}")
 
     # Step 5: Ensemble Optimization (MLP proposes, Transformer validates)
-    print(f"\n  Step 5: Running ensemble optimization (MLP + Transformer)...")
+    print("\n  Step 5: Running ensemble optimization (MLP + Transformer)...")
     optimized_df = optimize_ensemble(
         forecasted_df, mlp_path, transformer_path,
         n_candidates=args.n_candidates,
@@ -638,7 +636,7 @@ def main():
                  target_year, target_month, multipliers,
                  forecast_source=forecast_source)
 
-    print(f"\n  Done! Check results/ for output files.")
+    print("\n  Done! Check results/ for output files.")
 
 
 if __name__ == "__main__":

@@ -60,13 +60,13 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 
-from forecaster import DemandForecaster, N_FEATURES
+from forecaster import DemandForecaster
 
 logger = logging.getLogger(__name__)
 
@@ -280,13 +280,10 @@ class ShelfSpaceEnv(gym.Env):
         self._refresh_lifts()
 
         # 4-6. Simulate one day
-        day_of_week = int(self._day % 7)
-        week_of_year = int((self._day // 7) % 52) + 1
         total_reward = 0.0
         info_products = {}
 
         for pos_id, pid in self.placement.items():
-            pos = self.positions[pos_id]
             prod = self.products[pid]
 
             lift = float(self.current_lifts[pid])
