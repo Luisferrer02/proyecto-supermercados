@@ -1,0 +1,40 @@
+services:
+
+  backend:
+    # Drop the build block — production pulls from the registry.
+    build: null
+    image: ghcr.io/${GHCR_OWNER}/shelfopt-backend:${TAG:-latest}
+    deploy:
+      resources:
+        limits:
+          # PyTorch + ChromaDB resident set hovers around 1.2 GB during
+          # ingestion. Give it headroom; OOM kills in the middle of training
+          # corrupt the chromadb sqlite.
+          memory: 2g
+          cpus: "2.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  frontend:
+    build: null
+    image: ghcr.io/${GHCR_OWNER}/shelfopt-frontend:${TAG:-latest}
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  chromadb:
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"

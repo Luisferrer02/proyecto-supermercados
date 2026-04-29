@@ -1,0 +1,51 @@
+# Version control
+.git
+.github
+
+# Editor / OS
+.DS_Store
+.idea
+.vscode
+
+# Node
+**/node_modules
+**/.next
+**/dist
+**/build
+*.log
+npm-debug.log*
+
+# Python
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/venv
+**/venv-new
+**/.venv
+
+# Environment & secrets — pass via runtime env or volumes instead
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env-models
+!**/.env.example
+
+# Generated ML artifacts (mounted as volumes at runtime)
+mlops/data/monthly/*.csv
+mlops/results/
+mlops/.chromadb/
+mlops/chromadb/
+
+# Project-specific
+analysis_system/reports/
+auditorias/
+archive/
+
+# Misc
+*.tsbuildinfo
+coverage/
+.next/
+out/

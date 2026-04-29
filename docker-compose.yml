@@ -1,0 +1,95 @@
+# Compose schema 3.x is implicit in modern Docker; the explicit `version` key
+# is deprecated in Compose v2 and intentionally omitted.
+
+services:
+
+  # --------------------------------------------------------------------------
+  # Backend: Express + Python venv + mlops/ source. Spawns Python processes
+  # via child_process.spawn (see web/backend/src/services/pythonRunner.ts).
+  # --------------------------------------------------------------------------
+  backend:
+    build:
+      context: .                          # repo root — Dockerfile COPY paths assume this
+      dockerfile: web/backend/Dockerfile
+    image: ghcr.io/${GHCR_OWNER:-shelfopt}/shelfopt-backend:${TAG:-dev}
+    container_name: shelfopt-backend
+    environment:
+      PORT: "3001"
+      MLOPS_DIR: /app/mlops
+      RESULTS_DIR: /app/mlops/results
+      PYTHON_PATH: python3
+      VENV_DIR: /opt/venv
+      # OPENROUTER_API_KEY supplied via .env (gitignored). Falls through to
+      # the heuristic mode if absent — useful for offline demos.
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    volumes:
+      # Persist user uploads, training results, and the Chroma vector store
+      # across container restarts and image rebuilds.
+      - mlops_data:/app/mlops/data
+      - mlops_results:/app/mlops/results
+      - chromadb_data:/app/mlops/.chromadb
+      # Models cascade — read-only mount so a redeploy can change the
+      # cascade without rebuilding the image.
+      - ./mlops/.env-models:/app/mlops/.env-models:ro
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # Frontend: Next.js standalone server. Statically built — backend URL is
+  # baked at build time via the NEXT_PUBLIC_API_URL build arg.
+  # --------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: web/frontend/Dockerfile
+      args:
+        # Browsers hit the backend directly, so this must be the URL the
+        # browser can reach — not the inter-container DNS name.
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:3001}
+    image: ghcr.io/${GHCR_OWNER:-shelfopt}/shelfopt-frontend:${TAG:-dev}
+    container_name: shelfopt-frontend
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # ChromaDB (optional). Currently `04_ingest.py` uses an embedded Chroma
+  # client writing to /app/mlops/.chromadb (volume above). If we move to the
+  # standalone Chroma server later, point the embedded client at this URL
+  # via CHROMA_HOST=chromadb. Left here as scaffolding — comment out if not
+  # using.
+  # --------------------------------------------------------------------------
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: shelfopt-chromadb
+    environment:
+      IS_PERSISTENT: "TRUE"
+      ANONYMIZED_TELEMETRY: "FALSE"
+    volumes:
+      - chromadb_server_data:/chroma/.chroma/index
+    ports:
+      # Only expose locally — backend can reach it via the compose network
+      # without publishing to the host.
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+    profiles: ["chroma-server"]   # opt-in: `docker compose --profile chroma-server up`
+
+volumes:
+  mlops_data:
+  mlops_results:
+  chromadb_data:
+  chromadb_server_data:
