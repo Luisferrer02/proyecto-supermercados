@@ -8,6 +8,9 @@ permissions:
   contents: read
   packages: write       # required to push to GHCR
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   publish:
     name: Build + push to GHCR
