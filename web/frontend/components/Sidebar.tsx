@@ -4,12 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const nav = [
-  { href: "/", label: "Dashboard", icon: "⬛" },
-  { href: "/upload", label: "Upload CSV", icon: "⬆" },
-  { href: "/train", label: "Train Models", icon: "⚙" },
-  { href: "/evaluate", label: "Evaluate", icon: "📊" },
-  { href: "/ingest", label: "Ingest", icon: "🗄" },
-  { href: "/predict", label: "Predict", icon: "🔮" },
+  { href: "/", label: "Dashboard" },
+  { href: "/upload", label: "Upload CSV" },
+  { href: "/train", label: "Train Models" },
+  { href: "/evaluate", label: "Evaluate" },
+  { href: "/ingest", label: "Ingest" },
+  { href: "/predict", label: "Predict" },
 ];
 
 export function Sidebar() {
@@ -22,7 +22,7 @@ export function Sidebar() {
         <p className="text-xs text-muted-foreground mt-0.5">MLOps Pipeline</p>
       </div>
       <nav className="flex-1 p-2 space-y-0.5">
-        {nav.map(({ href, label, icon }) => {
+        {nav.map(({ href, label }) => {
           const active = pathname === href;
           return (
             <Link
@@ -34,7 +34,6 @@ export function Sidebar() {
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               }`}
             >
-              <span className="text-base leading-none">{icon}</span>
               {label}
             </Link>
           );

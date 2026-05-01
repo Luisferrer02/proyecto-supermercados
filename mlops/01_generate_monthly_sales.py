@@ -278,7 +278,7 @@ No markdown, no explanation, just the JSON array."""
 
             return results
         except Exception as e:
-            print(f"\n     ✗ Could not parse LLM JSON: {e}", end="")
+            print(f"\n      Could not parse LLM JSON: {e}", end="")
 
     # Every model in the cascade failed AND no parseable JSON — defaults
     print(" [using defaults]", end="")

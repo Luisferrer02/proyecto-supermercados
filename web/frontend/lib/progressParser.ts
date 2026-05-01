@@ -42,7 +42,7 @@ const PREDICT_RULES: Array<[string, string]> = [
   ["Step 3:",                           "Prediciendo tendencias de venta"],
   ["Using heuristic",                   "Calculando con reglas de temporada"],
   ["Querying LLM",                      "Consultando la IA"],
-  ["🤖",                                "Consultando modelo de IA"],
+  ["AI",                                "Consultando modelo de IA"],
   ["Got forecasts",                     "Ajuste estacional listo"],
   ["falling back to heuristic",         "Usando reglas de temporada (la IA no responde)"],
   ["Step 4:",                           "Aplicando ajustes a las ventas"],

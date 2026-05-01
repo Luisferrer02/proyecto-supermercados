@@ -171,7 +171,7 @@ def load_and_prepare(sample_size: int | None = None,
             }, f, indent=2)
         print(f"   Split hash (first 16 chars): {split_hash[:16]}…")
     except Exception as exc:
-        print(f"   ⚠  Could not write split hash: {exc}")
+        print(f"     Could not write split hash: {exc}")
 
     return df, train_df, val_df, test_df, holdout_df
 
@@ -419,14 +419,14 @@ def main():
     results = {}
 
     # ---- 1. MLP (larger) ----
-    print("\n🔵 Training MLP …")
+    print("\n Training MLP …")
     mlp = build_mlp(input_dim=input_dim)
     metrics_mlp, mlp = train_supervised(mlp, train_X, train_y, test_X, test_y,
                                          "MLP", epochs=args.epochs)
     mlp_version = save_model(mlp, "mlp", RESULTS_DIR,
                               metadata={"origin": "02_train_models.py",
                                         "epochs": args.epochs, **metrics_mlp})
-    print(f"   💾 MLP saved (hash {mlp_version['hash']}) → {mlp_version['archive_path']}")
+    print(f"    MLP saved (hash {mlp_version['hash']}) → {mlp_version['archive_path']}")
 
     # Additional evaluations on validation + rack-holdout splits
     mlp.eval()
@@ -445,14 +445,14 @@ def main():
     }
 
     # ---- 2. LSTM ----
-    print("\n🟢 Training LSTM …")
+    print("\n Training LSTM …")
     lstm = build_lstm(input_dim=input_dim)
     metrics_lstm, lstm = train_sequence_model(lstm, train_df, test_df,
                                                "LSTM", epochs=args.epochs)
     lstm_version = save_model(lstm, "lstm", RESULTS_DIR,
                                metadata={"origin": "02_train_models.py",
                                          "epochs": args.epochs, **metrics_lstm})
-    print(f"   💾 LSTM saved (hash {lstm_version['hash']}) → {lstm_version['archive_path']}")
+    print(f"    LSTM saved (hash {lstm_version['hash']}) → {lstm_version['archive_path']}")
     lstm_val_mse = eval_seq_mse(lstm, val_df)
     lstm_holdout_mse = eval_seq_mse(lstm, holdout_df)
     print(f"   [LSTM] Val MSE: {lstm_val_mse:.2f} €²  |  Holdout(rack) MSE: {lstm_holdout_mse:.2f} €²")
@@ -466,7 +466,7 @@ def main():
     }
 
     # ---- 3. Transformer ----
-    print("\n🟡 Training Transformer …")
+    print("\n Training Transformer …")
     transformer = build_transformer(input_dim=input_dim)
     metrics_trans, transformer = train_sequence_model(transformer, train_df, test_df,
                                                        "Transformer", epochs=150,
@@ -474,7 +474,7 @@ def main():
     trans_version = save_model(transformer, "transformer", RESULTS_DIR,
                                 metadata={"origin": "02_train_models.py",
                                           "epochs": 150, **metrics_trans})
-    print(f"   💾 Transformer saved (hash {trans_version['hash']}) → {trans_version['archive_path']}")
+    print(f"    Transformer saved (hash {trans_version['hash']}) → {trans_version['archive_path']}")
     trans_val_mse = eval_seq_mse(transformer, val_df)
     trans_holdout_mse = eval_seq_mse(transformer, holdout_df)
     print(f"   [Trans] Val MSE: {trans_val_mse:.2f} €²  |  Holdout(rack) MSE: {trans_holdout_mse:.2f} €²")
@@ -491,7 +491,7 @@ def main():
     identity_mse = float(torch.mean(test_y ** 2).item())
     random_pred = torch.randn_like(test_y) * float(test_y.std())
     random_mse = float(torch.mean((random_pred - test_y) ** 2).item())
-    print(f"\n📏 Prediction baselines on test set ({test_y.numel()} samples):")
+    print(f"\n Prediction baselines on test set ({test_y.numel()} samples):")
     print(f"   [Identity] Predicts 0 → MSE: {identity_mse:.2f} €²  "
           f"| RMSE: {identity_mse ** 0.5:.2f} €")
     print(f"   [Random]   Gaussian    → MSE: {random_mse:.2f} €²  "
@@ -508,7 +508,7 @@ def main():
     }
 
     # ---- 4. PPO ----
-    print("\n🔴 Training PPO …")
+    print("\n Training PPO …")
     ppo_results = train_ppo(df, n_episodes=args.ppo_episodes)
     results["PPO"] = {
         "original_profit": ppo_results["original_profit"],
@@ -516,7 +516,7 @@ def main():
     }
 
     # ---- Optimize using each model's own predictions ----
-    print("\n📊 Computing model-guided optimizations …")
+    print("\n Computing model-guided optimizations …")
     target_rack = ppo_results["rack_id"]
     rack_df = df[df["rack_id"] == target_rack].copy()
     if len(rack_df) > 40:
@@ -555,7 +555,7 @@ def main():
     results_file = RESULTS_DIR / "training_results.json"
     with open(results_file, "w") as f:
         json.dump(results, f, indent=2, default=str)
-    print(f"\n💾 Results saved to {results_file}")
+    print(f"\n Results saved to {results_file}")
 
     # Save rack layouts for visualization
     for name, layout_df in rack_layouts.items():

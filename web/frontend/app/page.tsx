@@ -189,7 +189,7 @@ export default function HomePage() {
       {/* Error bar */}
       {error && (
         <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-          ⚠ {error}
+          {error}
         </div>
       )}
 
@@ -378,7 +378,7 @@ export default function HomePage() {
               <CardTitle className="text-base">Reorganización de productos por balda</CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
                 Cada cinta representa productos que pasan de una balda a otra.
-                Las baldas a la altura de los ojos (3–5) están marcadas con ★.
+                Las baldas a la altura de los ojos (3–5) son las más rentables.
               </p>
             </CardHeader>
             <CardContent>

@@ -83,7 +83,7 @@ def chat_with_failover(
 
     candidates = resolve_models(models)
     if not api_key:
-        logger("   ⚠  No OPENROUTER_API_KEY — skipping LLM cascade.")
+        logger("     No OPENROUTER_API_KEY — skipping LLM cascade.")
         return None
 
     client = OpenAI(
@@ -96,7 +96,7 @@ def chat_with_failover(
         short = model.split("/")[-1]
         for attempt in range(1, per_model_retries + 1):
             try:
-                logger(f"   🤖 [{position}/{len(candidates)}] {short} "
+                logger(f"    [{position}/{len(candidates)}] {short} "
                        f"(try {attempt}/{per_model_retries})")
                 response = client.chat.completions.create(
                     model=model,
@@ -116,7 +116,7 @@ def chat_with_failover(
                 logger(f"      ↳ {'rate-limited' if is_rate_limited else 'error'}: {msg}")
                 # Small backoff with jitter before the next retry / next model
                 time.sleep(min(2 ** attempt + random.random(), 8.0))
-        logger(f"   ⚠  Model {short} exhausted retries, falling through.")
+        logger(f"     Model {short} exhausted retries, falling through.")
 
-    logger("   ⚠  All OpenRouter models in cascade failed.")
+    logger("     All OpenRouter models in cascade failed.")
     return None

@@ -183,16 +183,16 @@ No markdown, no explanation, just the JSON array."""
                 if is_rate_limit:
                     wait = max(wait, 5)  # at least 5s for rate limits
                     if attempt < max_retries - 1:
-                        print(f"\n     ⏳ Rate limited ({current_model}), retrying in {wait}s (attempt {attempt+2}/{max_retries}) …", end="")
+                        print(f"\n      Rate limited ({current_model}), retrying in {wait}s (attempt {attempt+2}/{max_retries}) …", end="")
                         time.sleep(wait)
                         continue
                     else:
                         if current_model != models_to_try[-1]:
-                            print("\n     🔄 Switching to fallback model …", end="")
+                            print("\n      Switching to fallback model …", end="")
                             break  # try next model
                         # else fall through to defaults
                 else:
-                    print(f"\n     ✗ Error: {e}", end="")
+                    print(f"\n      Error: {e}", end="")
                     if attempt < max_retries - 1:
                         time.sleep(wait)
                         continue
@@ -218,7 +218,7 @@ def main():
     args = parser.parse_args()
 
     # 1. Load CSV
-    print(f"📂 Loading {CSV_INPUT} …")
+    print(f" Loading {CSV_INPUT} …")
     df = pd.read_csv(CSV_INPUT)
     if args.limit:
         df = df.head(args.limit)
@@ -234,18 +234,18 @@ def main():
         df[c] = 0.0
 
     if args.dry_run:
-        print("🧪 DRY RUN — using mock augmentation …")
+        print(" DRY RUN — using mock augmentation …")
         rng = np.random.RandomState(42)
         for idx in df.index:
             mock = mock_augment(df.loc[idx], rng)
             for k, v in mock.items():
                 df.at[idx, k] = v
     else:
-        print("🌐 Calling OpenRouter API …")
+        print(" Calling OpenRouter API …")
         from openai import OpenAI
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
-            print("❌ Set OPENROUTER_API_KEY environment variable first.")
+            print(" Set OPENROUTER_API_KEY environment variable first.")
             sys.exit(1)
         client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
 
@@ -262,22 +262,22 @@ def main():
                     idx = df.index[start + i]
                     for k, v in res.items():
                         df.at[idx, k] = v
-                print("✓")
+                print("")
 
                 # Save progress every 50 batches
                 if (b + 1) % 50 == 0:
                     progress_path = BASE_DIR / "data" / "products_progress.csv"
                     progress_path.parent.mkdir(parents=True, exist_ok=True)
                     df.to_csv(progress_path, index=False)
-                    print(f"   💾 Progress saved ({end} products so far)")
+                    print(f"    Progress saved ({end} products so far)")
 
                 time.sleep(3)  # rate-limit courtesy for free tier
         except KeyboardInterrupt:
-            print(f"\n\n⚠  Interrupted at batch {b+1}/{n_batches}. Saving progress …")
+            print(f"\n\n  Interrupted at batch {b+1}/{n_batches}. Saving progress …")
             progress_path = BASE_DIR / "data" / "products_progress.csv"
             progress_path.parent.mkdir(parents=True, exist_ok=True)
             df.to_csv(progress_path, index=False)
-            print(f"   💾 Partial results saved to {progress_path}")
+            print(f"    Partial results saved to {progress_path}")
             print("   Re-run the script to resume (already-augmented products keep defaults for merge).")
             sys.exit(0)
 
@@ -285,7 +285,7 @@ def main():
     categories = df["Category"].unique().tolist()
     cat_to_rack = {cat: i for i, cat in enumerate(categories)}
     df["rack_id"] = df["Category"].map(cat_to_rack)
-    print(f"🗄  Assigned {len(categories)} racks (one per category)")
+    print(f"  Assigned {len(categories)} racks (one per category)")
 
     # 5. Random baseline shelf_level 1-7
     random.seed(42)
@@ -295,17 +295,17 @@ def main():
     from utils.retail_physics import enforce_shelf_constraint, validate_all_shelves
     violations_before = validate_all_shelves(df)
     if violations_before:
-        print(f"⚠  {len(violations_before)} shelf violations detected. Fixing …")
+        print(f"  {len(violations_before)} shelf violations detected. Fixing …")
         df = enforce_shelf_constraint(df)
         violations_after = validate_all_shelves(df)
         print(f"   After fix: {len(violations_after)} violations remaining.")
     else:
-        print("✅ No shelf width violations.")
+        print(" No shelf width violations.")
 
     # 7. Save
     CSV_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(CSV_OUTPUT, index=False)
-    print(f"💾 Saved augmented data to {CSV_OUTPUT}")
+    print(f" Saved augmented data to {CSV_OUTPUT}")
     print(f"   Columns: {list(df.columns)}")
     print(f"   Shape: {df.shape}")
     print()

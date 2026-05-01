@@ -83,8 +83,8 @@ def print_comparison_table(results: dict):
     best_mse_models = {k: v for k, v in results.items() if "mse" in v}
     if best_mse_models:
         best_mse_model = min(best_mse_models.items(), key=lambda x: x[1]["mse"])
-        print(f"\n🏆 Lowest MSE    : {best_mse_model[0]} ({best_mse_model[1]['mse']:.4f})")
-    print(f"🏆 Highest Profit: {best_profit_model[0]} (€{best_profit_model[1].get('optimized_profit', 0):.2f})")
+        print(f"\n Lowest MSE    : {best_mse_model[0]} ({best_mse_model[1]['mse']:.4f})")
+    print(f" Highest Profit: {best_profit_model[0]} (€{best_profit_model[1].get('optimized_profit', 0):.2f})")
 
 
 # ---------------------------------------------------------------------------
@@ -133,7 +133,7 @@ def visualize_rack(df: pd.DataFrame, results: dict, rack_id: int = None):
 
     shelves = list(range(1, NUM_SHELVES + 1))
     shelf_labels = [
-        "1 (Bottom)", "2 (Bottom)", "3 (Eye ★)", "4 (Eye ★)", "5 (Eye ★)",
+        "1 (Bottom)", "2 (Bottom)", "3 (Eye)", "4 (Eye)", "5 (Eye)",
         "6 (Top)", "7 (Top)"
     ]
 
@@ -188,7 +188,7 @@ def visualize_rack(df: pd.DataFrame, results: dict, rack_id: int = None):
 
     plot_path = RESULTS_DIR / "rack_comparison.png"
     fig.savefig(plot_path, dpi=150, bbox_inches="tight")
-    print(f"\n📊 Rack visualization saved to {plot_path}")
+    print(f"\n Rack visualization saved to {plot_path}")
     plt.close()
 
     return plot_path
@@ -222,7 +222,7 @@ def plot_mse_comparison(results: dict):
     plt.tight_layout()
     plot_path = RESULTS_DIR / "mse_comparison.png"
     fig.savefig(plot_path, dpi=150, bbox_inches="tight")
-    print(f"📊 MSE comparison saved to {plot_path}")
+    print(f" MSE comparison saved to {plot_path}")
     plt.close()
 
 
@@ -268,7 +268,7 @@ def plot_profit_comparison(results: dict):
     plt.tight_layout()
     plot_path = RESULTS_DIR / "profit_comparison.png"
     fig.savefig(plot_path, dpi=150, bbox_inches="tight")
-    print(f"📊 Profit comparison saved to {plot_path}")
+    print(f" Profit comparison saved to {plot_path}")
     plt.close()
 
 
@@ -314,8 +314,8 @@ def visualize_shelf_comparison(df: pd.DataFrame):
     category = orig["Category"].iloc[0] if "Category" in orig.columns else ""
 
     shelves = list(range(1, NUM_SHELVES + 1))
-    labels = ["1\n(Bottom)", "2\n(Bottom)", "3\n(Eye ★)", "4\n(Eye ★)",
-              "5\n(Eye ★)", "6\n(Top)", "7\n(Top)"]
+    labels = ["1\n(Bottom)", "2\n(Bottom)", "3\n(Eye)", "4\n(Eye)",
+              "5\n(Eye)", "6\n(Top)", "7\n(Top)"]
 
     orig_counts = [len(orig[orig["shelf_level"] == s]) for s in shelves]
     best_counts = [len(best_df[best_df["shelf_level"] == s]) for s in shelves]
@@ -350,7 +350,7 @@ def visualize_shelf_comparison(df: pd.DataFrame):
     plt.tight_layout()
     path = RESULTS_DIR / "shelf_comparison_bars.png"
     fig.savefig(path, dpi=150, bbox_inches="tight")
-    print(f"📊 Shelf comparison bars saved to {path}")
+    print(f" Shelf comparison bars saved to {path}")
     plt.close()
 
 
@@ -405,7 +405,7 @@ def visualize_alluvial(df: pd.DataFrame):
     }
     shelf_labels = {
         1: "Shelf 1 (Bottom)", 2: "Shelf 2 (Bottom)",
-        3: "Shelf 3 (Eye ★)", 4: "Shelf 4 (Eye ★)", 5: "Shelf 5 (Eye ★)",
+        3: "Shelf 3 (Eye)", 4: "Shelf 4 (Eye)", 5: "Shelf 5 (Eye)",
         6: "Shelf 6 (Top)", 7: "Shelf 7 (Top)",
     }
 
@@ -564,7 +564,7 @@ def visualize_alluvial(df: pd.DataFrame):
 
     path = RESULTS_DIR / "alluvial_diagram.png"
     fig.savefig(path, dpi=150, bbox_inches="tight")
-    print(f"📊 Alluvial diagram saved to {path}")
+    print(f" Alluvial diagram saved to {path}")
     plt.close()
 
 

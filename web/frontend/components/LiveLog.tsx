@@ -78,7 +78,7 @@ export function LiveLog({ url, onDone, autoStart = true }: Props) {
         )}
         {!active && lines.length > 0 && (
           <span className="text-xs text-muted-foreground">
-            {lines[lines.length - 1]?.msg.includes("code 0") ? "✓ Done" : "⚠ Finished"}
+            {lines[lines.length - 1]?.msg.includes("code 0") ? "Completado" : "Finalizado"}
           </span>
         )}
       </div>

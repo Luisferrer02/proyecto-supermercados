@@ -75,10 +75,10 @@ export default function IngestPage() {
           </button>
         )}
         {done === true && (
-          <span className="text-sm text-green-600">✓ Ingestion complete — knowledge base ready</span>
+          <span className="text-sm text-green-600">Ingesta completada — base de conocimiento lista</span>
         )}
         {done === false && (
-          <span className="text-sm text-red-600">⚠ Ingestion finished with errors</span>
+          <span className="text-sm text-red-600">La ingesta ha terminado con errores</span>
         )}
       </div>
 

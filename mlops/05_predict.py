@@ -78,11 +78,11 @@ def retrieve_context(target_year: int, target_month: int,
     context = kb.retrieve_context(target_year, target_month, category)
 
     if not context:
-        print("   ⚠  No data found in knowledge base. "
+        print("     No data found in knowledge base. "
               "Run 04_ingest.py first.")
         return {}
 
-    print(f"   📚 Retrieved context from {len(context)} month(s):")
+    print(f"    Retrieved context from {len(context)} month(s):")
     for month_key, data in context.items():
         n_docs = len(data["documents"])
         print(f"      • {month_key}: {n_docs} category summaries")
@@ -193,7 +193,7 @@ def llm_forecast(target_year: int, target_month: int,
         raw = json_match.group(0) if json_match else content
         multipliers = json.loads(raw)
     except Exception as exc:
-        print(f"   ⚠  Could not parse JSON from LLM response: {exc}")
+        print(f"     Could not parse JSON from LLM response: {exc}")
         return {}
 
     # Sanitize multipliers — clamp to a realistic range to neutralize
@@ -205,7 +205,7 @@ def llm_forecast(target_year: int, target_month: int,
         except (TypeError, ValueError):
             continue
 
-    print(f"   ✅ Got forecasts for {len(clean)} categories")
+    print(f"    Got forecasts for {len(clean)} categories")
     return clean
 
 
@@ -445,7 +445,7 @@ def save_results(original_df: pd.DataFrame, optimized_df: pd.DataFrame,
     # Save optimized CSV
     out_csv = RESULTS_DIR / f"optimized_{target_year}_{target_month:02d}_{month_name}.csv"
     optimized_df.to_csv(out_csv, index=False)
-    print(f"\n   💾 Optimized layout saved → {out_csv}")
+    print(f"\n    Optimized layout saved → {out_csv}")
 
     # Save per-product explanations (why each moved product changed shelf)
     try:
@@ -462,10 +462,10 @@ def save_results(original_df: pd.DataFrame, optimized_df: pd.DataFrame,
                 "n_products_moved": n_moved,
                 "by_rack": explanations,
             }, f, indent=2, ensure_ascii=False)
-        print(f"   💾 Explanations ({n_moved} products moved) → {expl_path}")
+        print(f"    Explanations ({n_moved} products moved) → {expl_path}")
     except Exception as exc:
         # Explainability is a nice-to-have; never let it break the run.
-        print(f"   ⚠  Could not generate explanations: {exc}")
+        print(f"     Could not generate explanations: {exc}")
 
     # Save forecast multipliers (with metadata about where they came from)
     forecast_path = RESULTS_DIR / f"forecast_{target_year}_{target_month:02d}.json"
@@ -477,7 +477,7 @@ def save_results(original_df: pd.DataFrame, optimized_df: pd.DataFrame,
     }
     with open(forecast_path, "w") as f:
         json.dump(forecast_payload, f, indent=2, ensure_ascii=False)
-    print(f"   💾 Forecast multipliers → {forecast_path}"
+    print(f"    Forecast multipliers → {forecast_path}"
           f"  (source: {forecast_source})")
 
     # Compute profit comparison per rack
@@ -554,7 +554,7 @@ def main():
         target_month = int(parts[1])
         assert 1 <= target_month <= 12
     except (ValueError, IndexError, AssertionError):
-        print("❌ Invalid month format. Use YYYY-MM (e.g. 2026-01)")
+        print(" Invalid month format. Use YYYY-MM (e.g. 2026-01)")
         sys.exit(1)
 
     month_name = MONTH_NAMES[target_month]
@@ -600,7 +600,7 @@ def main():
             forecast_source = "llm"
         else:
             # Automatic fallback when the LLM call(s) failed or API key missing
-            print("   ⚠  LLM unavailable — falling back to heuristic forecast.")
+            print("     LLM unavailable — falling back to heuristic forecast.")
             multipliers = heuristic_forecast(target_month, categories)
 
     # Show top adjustments

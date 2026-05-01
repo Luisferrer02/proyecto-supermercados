@@ -142,7 +142,7 @@ export function ShelfSankey({ movements, width = 640, height = 420 }: Props) {
               />
               <text x={leftX - 8} y={y + barInner / 2 + 4} textAnchor="end"
                     fontSize="12" fill="currentColor" fontWeight={isEye ? 600 : 400}>
-                Balda {s}{isEye ? " ★" : ""}
+                Balda {s}{isEye ? " (ojos)" : ""}
               </text>
               <text x={leftX + barWidth / 2} y={y + barInner / 2 + 4}
                     textAnchor="middle" fontSize="10" fill="white">
@@ -173,7 +173,7 @@ export function ShelfSankey({ movements, width = 640, height = 420 }: Props) {
               <text x={rightX + barWidth + 8} y={y + barInner / 2 + 4}
                     textAnchor="start"
                     fontSize="12" fill="currentColor" fontWeight={isEye ? 600 : 400}>
-                Balda {s}{isEye ? " ★" : ""}
+                Balda {s}{isEye ? " (ojos)" : ""}
               </text>
               <text x={rightX + barWidth / 2} y={y + barInner / 2 + 4}
                     textAnchor="middle" fontSize="10" fill="white">

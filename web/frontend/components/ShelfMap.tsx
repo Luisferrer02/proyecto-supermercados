@@ -47,7 +47,7 @@ export function ShelfMap({ products, rackId }: Props) {
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-orange-500 inline-block" /> Medium-high</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-yellow-500 inline-block" /> Medium</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-500 inline-block" /> Low profit</span>
-        <span className="flex items-center gap-1 ml-2">★ Eye-level shelf</span>
+        <span className="flex items-center gap-1 ml-2">Balda a la altura de los ojos</span>
       </div>
 
       <div className="overflow-x-auto pb-2">
@@ -67,7 +67,7 @@ export function ShelfMap({ products, rackId }: Props) {
                     isEye ? "text-amber-600 font-semibold" : "text-muted-foreground"
                   }`}
                 >
-                  {isEye ? `★ Shelf ${shelfNum}` : `Shelf ${shelfNum}`}
+                  {isEye ? `Balda ${shelfNum} (ojos)` : `Balda ${shelfNum}`}
                 </div>
 
                 {/* Shelf bar */}
