@@ -32,6 +32,7 @@ export default function TrainPage() {
     } catch {}
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadResults(); }, []);
 
   const startTraining = () => {

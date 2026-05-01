@@ -51,6 +51,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshFiles();
     api.optimizeDefaultMonth().then(d => {
       if (d?.month) setMonth(d.month);

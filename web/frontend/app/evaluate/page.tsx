@@ -24,6 +24,7 @@ export default function EvaluatePage() {
   const [streaming, setStreaming] = useState(false);
   const [streamUrl, setStreamUrl] = useState("");
   const [showLog, setShowLog] = useState(false);
+  const [cacheBust, setCacheBust] = useState(() => Date.now());
 
   const loadStatus = async () => {
     try {
@@ -81,7 +82,7 @@ export default function EvaluatePage() {
       {showLog && streamUrl && (
         <LiveLog
           url={streamUrl}
-          onDone={() => { setStreaming(false); loadStatus(); }}
+          onDone={() => { setStreaming(false); loadStatus(); setCacheBust(Date.now()); }}
         />
       )}
 
@@ -96,8 +97,9 @@ export default function EvaluatePage() {
               </CardHeader>
               <CardContent>
                 {/* Cache-bust with timestamp to reload after regeneration */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={`${api.resultUrl(chart.name)}?t=${Date.now()}`}
+                  src={`${api.resultUrl(chart.name)}?t=${cacheBust}`}
                   alt={chart.name}
                   className="w-full rounded-lg border border-border"
                 />
