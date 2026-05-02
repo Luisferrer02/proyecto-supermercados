@@ -67,6 +67,9 @@ COPY --from=ts-build /build/package.json    /app/web/backend/package.json
 
 COPY mlops/ /app/mlops/
 
+# Install mlops as a package so utils/ and models/ are importable
+RUN pip install -e /app/mlops/
+
 # Don't bundle the local broken venvs — runtime venv lives at /opt/venv
 RUN rm -rf /app/mlops/venv /app/mlops/venv-new /app/mlops/__pycache__ \
     && find /app/mlops -name '__pycache__' -type d -exec rm -rf {} +

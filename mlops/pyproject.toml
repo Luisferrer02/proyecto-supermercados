@@ -1,0 +1,8 @@
+[project]
+name = "shelfopt-mlops"
+version = "0.1.0"
+description = "ML pipeline for supermarket shelf optimization"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+include = ["utils*", "models*"]
