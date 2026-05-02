@@ -17,17 +17,22 @@ Resultados obtenidos con el dataset sintético generado por nuestro propio pipel
 ## Estructura del repositorio
 
 ```
-├── mlops/          # Pipeline de ML: generación de datos → entrenamiento → evaluación → predicción
-│   ├── models/     #   Arquitecturas de modelos (MLP, LSTM, Transformer, PPO)
-│   ├── utils/      #   Motor de física de estanterías y base de conocimiento ChromaDB
-│   ├── data/       #   Datos mensuales de ventas generados
-│   ├── results/    #   Resultados de entrenamiento: pesos, gráficos, métricas
-│   └── docs/       #   Documentación técnica
-├── web/            # Dashboard web full-stack
-│   ├── frontend/   #   Aplicación Next.js (subida, entrenamiento, evaluación, predicción)
-│   └── backend/    #   API Express (ejecuta scripts de Python mediante procesos hijos)
-├── auditorias/     # Informes y presentaciones de auditoría
-└── archive/        # Prototipos iniciales y propuestas anteriores
+├── mlops/              # Pipeline de ML
+│   ├── models/         #   Arquitecturas (MLP, LSTM, Transformer, PPO)
+│   ├── utils/          #   Módulos compartidos (física de estanterías, datos, entrenamiento, LLM)
+│   ├── tests/          #   Tests unitarios (pytest)
+│   ├── data/           #   Datos mensuales de ventas generados
+│   ├── results/        #   Pesos de modelos, gráficos, métricas
+│   └── docs/           #   Documentación técnica
+├── web/                # Dashboard web full-stack
+│   ├── frontend/       #   Next.js (subida, entrenamiento, evaluación, predicción)
+│   └── backend/        #   API Express (ejecuta scripts Python mediante procesos hijos)
+├── .github/workflows/  # CI/CD (GitHub Actions)
+│   ├── ci.yml          #   Lint, tests, typecheck, build Docker (en cada push)
+│   └── release.yml     #   Publica imágenes en GHCR (en tags v*)
+├── docker-compose.yml  # Stack local: backend + frontend + chromadb
+├── auditorias/         # Informes y presentaciones de auditoría
+└── archive/            # Prototipos iniciales y propuestas anteriores
 ```
 
 ## Inicio rápido
@@ -49,6 +54,14 @@ python 04_ingest.py
 python 05_predict.py
 ```
 
+### Tests
+
+```bash
+cd mlops
+pip install pytest
+python -m pytest tests/ -v
+```
+
 ### Dashboard web
 
 ```bash
@@ -60,10 +73,38 @@ npm run dev:backend    # API Express en :3001
 npm run dev:frontend   # Aplicación Next.js en :3000
 ```
 
+### Docker
+
+```bash
+# Levantar todo el stack
+docker compose up --build
+
+# Solo frontend + backend (sin chromadb standalone)
+docker compose up backend frontend
+
+# Producción (imágenes de GHCR)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+## CI/CD
+
+Cada push ejecuta automáticamente (solo los jobs afectados por los archivos cambiados):
+
+| Job | Qué hace | Se ejecuta si cambia |
+|-----|----------|---------------------|
+| Python quality | ruff + bandit + pip-audit + pytest (61 tests) | `mlops/` |
+| Backend quality | TypeScript typecheck + build + npm audit | `web/backend/` |
+| Frontend quality | TypeScript typecheck + ESLint + Next.js build | `web/frontend/` |
+| Docker build | Construye ambas imágenes (sin push) | Cualquiera de los anteriores o Dockerfiles |
+
+Al crear un tag `v*` se publican las imágenes en GitHub Container Registry (GHCR).
+
 ## Stack tecnológico
 
 - **ML**: PyTorch (MLP, LSTM, Transformer, PPO)
 - **RAG**: ChromaDB + OpenRouter
 - **Frontend**: Next.js + TypeScript + Tailwind CSS
 - **Backend**: Express + TypeScript
+- **CI/CD**: GitHub Actions + Docker Compose + GHCR
+- **Testing**: pytest (Python), ESLint + tsc (TypeScript)
 - **Datos**: ~4.500 productos en 149 categorías de una cadena de supermercados española
