@@ -58,10 +58,10 @@ export default function TrainPage() {
       />
       <div className="animate-fade-in-up">
         <h1 className="text-3xl font-heading font-extrabold uppercase tracking-tight text-secondary">
-          Train Models
+          Comparación de modelos
         </h1>
         <p className="text-muted-foreground text-sm mt-2">
-          Runs <code className="bg-muted px-1.5 py-0.5 rounded text-xs">02_train_models.py</code> — trains MLP, LSTM, Transformer, and PPO on the uploaded CSV data.
+          Ejecuta <code className="bg-muted px-1.5 py-0.5 rounded text-xs">02_train_models.py</code>: entrena MLP, LSTM, Transformer y PPO sobre los CSVs subidos y muestra cómo se comporta cada uno.
         </p>
       </div>
 
@@ -71,14 +71,14 @@ export default function TrainPage() {
           disabled={streaming}
           className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
         >
-          {streaming ? "Training in progress…" : "Start Training"}
+          {streaming ? "Entrenando…" : "Lanzar entrenamiento"}
         </button>
         {streaming && (
           <button
             onClick={() => { api.trainStop(); setStreaming(false); }}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
           >
-            Stop
+            Cancelar
           </button>
         )}
       </div>
@@ -95,17 +95,25 @@ export default function TrainPage() {
           {/* Profit chart */}
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle className="text-sm">Optimized vs Original Profit (sample rack)</CardTitle>
+              <CardTitle className="text-sm">
+                Beneficio antes vs. después por modelo
+                <span className="block text-xs font-normal text-muted-foreground mt-0.5">
+                  Calculado sobre una estantería representativa para comparar modelos en condiciones idénticas
+                </span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 4, left: 8 }}>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={chartData} margin={{ top: 8, right: 12, bottom: 4, left: 8 }}>
                   <XAxis dataKey="model" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="Original Profit" fill="#461e10" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="Optimized Profit" fill="#09543d" radius={[3, 3, 0, 0]} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `€${v.toLocaleString("es-ES")}`} />
+                  <Tooltip formatter={(value) => [
+                    `€${Number(value ?? 0).toLocaleString("es-ES")}`,
+                    "",
+                  ]} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="Original Profit" name="Antes" fill="#461e10" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="Optimized Profit" name="Después" fill="#09543d" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -122,11 +130,14 @@ export default function TrainPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={160}>
-                <BarChart data={chartData.filter((d) => d.MSE != null)} margin={{ top: 4, right: 8, bottom: 4, left: 8 }}>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={chartData.filter((d) => d.MSE != null)} margin={{ top: 8, right: 12, bottom: 4, left: 8 }}>
                   <XAxis dataKey="model" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${v.toLocaleString("es-ES")}`} />
+                  <Tooltip formatter={(value) => [
+                    `${Number(value ?? 0).toLocaleString("es-ES")} €²`,
+                    "MSE",
+                  ]} />
                   <Bar dataKey="MSE" fill="#f45c24" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -136,18 +147,18 @@ export default function TrainPage() {
           {/* Results table */}
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle className="text-sm">Model Comparison</CardTitle>
+              <CardTitle className="text-sm">Comparativa de modelos</CardTitle>
             </CardHeader>
             <CardContent>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-muted-foreground text-xs">
-                    <th className="text-left pb-2">Model</th>
-                    <th className="text-right pb-2" title="Mean Squared Error in €²">MSE (€²)</th>
-                    <th className="text-right pb-2" title="Root Mean Squared Error: error típico en €">RMSE (€)</th>
-                    <th className="text-right pb-2">Original €</th>
-                    <th className="text-right pb-2">Optimized €</th>
-                    <th className="text-right pb-2">Lift</th>
+                    <th className="text-left pb-2">Modelo</th>
+                    <th className="text-right pb-2" title="Error cuadrático medio (€²)">MSE (€²)</th>
+                    <th className="text-right pb-2" title="Raíz del MSE: error típico interpretable en €">RMSE (€)</th>
+                    <th className="text-right pb-2">Antes (€)</th>
+                    <th className="text-right pb-2">Después (€)</th>
+                    <th className="text-right pb-2">Mejora</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -174,7 +185,7 @@ export default function TrainPage() {
               </table>
               <p className="text-xs text-muted-foreground mt-3">
                 MSE en €² (errores al cuadrado); RMSE en € es el error típico interpretable por producto.
-                Los baselines de predicción (Identity = predice 0; Random = ruido gaussiano) se guardan en{" "}
+                Los <em>baselines</em> de predicción (Identidad = predice 0; Aleatorio = ruido gaussiano) se guardan en{" "}
                 <code className="bg-muted px-1 rounded text-[11px]">training_results.json</code>.
               </p>
             </CardContent>
@@ -184,7 +195,7 @@ export default function TrainPage() {
 
       {!results && !streaming && (
         <div className="text-sm text-muted-foreground">
-          No training results yet. Click &quot;Start Training&quot; to begin.
+          Aún no hay resultados de entrenamiento. Pulsa <span className="font-medium">«Lanzar entrenamiento»</span> para empezar.
         </div>
       )}
     </div>
