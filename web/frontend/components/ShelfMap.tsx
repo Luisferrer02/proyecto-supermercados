@@ -22,16 +22,26 @@ interface Props {
 const SHELF_SCALE = 0.72; // px per cm (300cm * 0.72 = 216px)
 const EYE_LEVEL = new Set([3, 4, 5]);
 
-function profitColor(p: Product): string {
+// Profit tiers — kept consistent with the rest of the UI: deeper colour =
+// higher profit, all four steps share the same hue ramp so the legend reads
+// like a single scale rather than a traffic light.
+function profitTier(p: Product): { color: string; label: string } {
   const price = parseFloat(p.price_numeric || "0");
   const margin = parseFloat(p.profit_margin_percentage || "0") / 100;
   const sales = parseFloat(p.estimated_monthly_sales || "0");
   const profit = price * margin * sales;
-  if (profit > 500) return "#ef4444";
-  if (profit > 200) return "#f97316";
-  if (profit > 80) return "#eab308";
-  return "#22c55e";
+  if (profit > 500) return { color: "#09543d", label: "Muy alto" };  // primary forest
+  if (profit > 200) return { color: "#1e7d5f", label: "Alto"      };
+  if (profit > 80)  return { color: "#5fae8e", label: "Medio"     };
+  return                      { color: "#a8c9b6", label: "Bajo"   };
 }
+
+const LEGEND = [
+  { color: "#a8c9b6", label: "Bajo (<80€)" },
+  { color: "#5fae8e", label: "Medio (80-200€)" },
+  { color: "#1e7d5f", label: "Alto (200-500€)" },
+  { color: "#09543d", label: "Muy alto (>500€)" },
+];
 
 export function ShelfMap({ products, rackId }: Props) {
   const [hovered, setHovered] = useState<Product | null>(null);
@@ -43,11 +53,17 @@ export function ShelfMap({ products, rackId }: Props) {
     <div className="space-y-3">
       {/* Legend */}
       <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-red-500 inline-block" /> High profit</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-orange-500 inline-block" /> Medium-high</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-yellow-500 inline-block" /> Medium</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-500 inline-block" /> Low profit</span>
-        <span className="flex items-center gap-1 ml-2">Balda a la altura de los ojos</span>
+        <span className="font-medium text-foreground/80">Beneficio mensual estimado:</span>
+        {LEGEND.map((l) => (
+          <span key={l.label} className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: l.color }} />
+            {l.label}
+          </span>
+        ))}
+        <span className="flex items-center gap-1 ml-2 text-amber-600 font-medium">
+          <span className="w-3 h-3 rounded-sm inline-block bg-amber-500/20 border border-amber-500/60" />
+          Balda a la altura de los ojos
+        </span>
       </div>
 
       <div className="overflow-x-auto pb-2">
@@ -84,7 +100,7 @@ export function ShelfMap({ products, rackId }: Props) {
                     );
                     const left = xOffset;
                     xOffset += w + 2;
-                    const color = profitColor(p);
+                    const { color } = profitTier(p);
                     return (
                       <div
                         key={i}
@@ -94,7 +110,7 @@ export function ShelfMap({ products, rackId }: Props) {
                           width: w,
                           height: 40,
                           backgroundColor: color,
-                          opacity: 0.85,
+                          opacity: 0.92,
                         }}
                         onMouseEnter={() => setHovered(p)}
                         onMouseLeave={() => setHovered(null)}
@@ -130,18 +146,18 @@ export function ShelfMap({ products, rackId }: Props) {
       {hovered && (
         <div className="rounded-lg border border-border bg-card p-3 text-xs space-y-1 shadow-sm">
           <div className="font-semibold text-sm">{hovered.name || "—"}</div>
-          <div className="text-muted-foreground">Category: {hovered.Category || rackId}</div>
+          <div className="text-muted-foreground">Categoría: {hovered.Category || rackId}</div>
           <div className="grid grid-cols-3 gap-2 mt-1">
             <div>
-              <div className="text-muted-foreground">Price</div>
+              <div className="text-muted-foreground">Precio</div>
               <div>€{parseFloat(hovered.price_numeric || "0").toFixed(2)}</div>
             </div>
             <div>
-              <div className="text-muted-foreground">Margin</div>
+              <div className="text-muted-foreground">Margen</div>
               <div>{hovered.profit_margin_percentage || "—"}%</div>
             </div>
             <div>
-              <div className="text-muted-foreground">Sales/mo</div>
+              <div className="text-muted-foreground">Ventas/mes</div>
               <div>{hovered.estimated_monthly_sales || "—"}</div>
             </div>
           </div>
