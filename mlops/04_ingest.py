@@ -21,7 +21,6 @@ import numpy as np
 import torch
 from torch import nn
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 from models.mlp import build_mlp
 from models.transformer_model import build_transformer
 from utils.csv_schema import all_ok, format_report, validate_directory

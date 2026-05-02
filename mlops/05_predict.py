@@ -25,9 +25,7 @@ import pandas as pd
 import torch
 from dotenv import load_dotenv
 
-load_dotenv()
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 from models.mlp import build_mlp
 from models.transformer_model import build_transformer
 from utils.data_io import get_seasonal_mult
@@ -40,6 +38,8 @@ from utils.retail_physics import (
     compute_rack_profit,
 )
 from utils.training import FEATURE_COLS, optimize_rack_mlp
+
+load_dotenv()
 
 # ---------------------------------------------------------------------------
 # Config

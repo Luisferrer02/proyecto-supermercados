@@ -19,7 +19,6 @@ Usage:
 import argparse
 import hashlib
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -27,7 +26,6 @@ import pandas as pd
 import torch
 from torch import nn
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 from models.lstm_model import build_lstm
 from models.mlp import build_mlp
 from models.ppo_agent import PPOTrainer, RackEnv

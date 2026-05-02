@@ -27,11 +27,11 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 
-load_dotenv()
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from utils.retail_physics import enforce_shelf_constraint, validate_all_shelves  # noqa: I001
+from utils.retail_physics import enforce_shelf_constraint, validate_all_shelves
 from utils.data_io import assign_shelves, parse_eur_price, profile_for
+
+load_dotenv()
 
 # ---------------------------------------------------------------------------
 # Config

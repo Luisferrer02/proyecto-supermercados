@@ -7,15 +7,12 @@ PPO Reinforcement Learning Agent for Shelf Optimization
 - **Agent**: Actor-Critic MLP with PPO clipped objective.
 """
 
-import os
-import sys
 from typing import List, Tuple
 
 import numpy as np
 import torch
 from torch import nn, optim
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from utils.retail_physics import (
     NUM_SHELVES,
     compute_product_profit,

@@ -35,10 +35,8 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 
-load_dotenv()  # Auto-load .env file
 
 # Ensure the mlops/ directory is on the path for utils imports
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from utils.data_io import (
     assign_shelves,
@@ -47,6 +45,8 @@ from utils.data_io import (
     profile_for,
 )
 from utils.retail_physics import enforce_shelf_constraint
+
+load_dotenv()
 
 # ---------------------------------------------------------------------------
 # Config

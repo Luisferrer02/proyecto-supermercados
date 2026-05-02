@@ -11,22 +11,21 @@ Usage:
 """
 
 import json
-import sys
 from collections import defaultdict
 from pathlib import Path
 
 import matplotlib
 
-matplotlib.use("Agg")  # headless
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.path import Path as MplPath
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 from utils.data_io import load_monthly_csvs
 from utils.retail_physics import NUM_SHELVES, compute_rack_profit, optimize_rack_greedy
+
+matplotlib.use("Agg")  # headless
 
 # ---------------------------------------------------------------------------
 # Config

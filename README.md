@@ -38,6 +38,7 @@ Resultados obtenidos con el dataset sintético generado por nuestro propio pipel
 cd mlops
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
+pip install -e .  # Instala mlops/ como paquete para que utils/ y models/ sean importables
 cp .env.example .env  # Añade tu clave de API de OpenRouter
 
 # Ejecutar el pipeline (en orden)
