@@ -3,7 +3,7 @@
 01_generate_monthly_sales.py — Monthly Sales Dataset Generator
 ================================================================
 Reads `products_macro.csv` (Category, name, subtitle, price, discount_price)
-and creates 6 monthly sales CSVs (July–December 2025), each simulating a
+and creates 6 monthly sales CSVs (July-December 2025), each simulating a
 different month's shelf activity.
 
 Output columns per CSV:
@@ -12,7 +12,7 @@ Output columns per CSV:
   estimated_monthly_sales, profit_margin_percentage,
   product_width_cm, rack_id, shelf_level
 
-Not all products appear in every month — a random 60-90% subset is chosen
+Not all products appear in every month — a random 60-90 % subset is chosen
 each month, with seasonal variation in sales figures.
 
 Usage:
@@ -29,13 +29,24 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict, List
 
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 
 load_dotenv()  # Auto-load .env file
+
+# Ensure the mlops/ directory is on the path for utils imports
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from utils.data_io import (
+    assign_shelves,
+    get_seasonal_mult,
+    parse_eur_price,
+    profile_for,
+)
+from utils.retail_physics import enforce_shelf_constraint
 
 # ---------------------------------------------------------------------------
 # Config
@@ -44,11 +55,7 @@ BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_INPUT = BASE_DIR / "products_macro.csv"
 DEFAULT_OUTPUT_DIR = BASE_DIR / "data" / "monthly"
 
-NUM_SHELVES = 7
-SHELF_WIDTH_CM = 300
 BATCH_SIZE = 30
-MODEL_NAME = "arcee-ai/trinity-large-preview:free"
-FALLBACK_MODEL = "stepfun/step-3.5-flash:free"
 
 # Months to generate
 MONTHS = [
@@ -66,36 +73,6 @@ MONTHS = [
     (2025, 12, "december"),
 ]
 
-# Seasonal multipliers: how much sales shift per month
-# (summer months = more fresh food, December = holidays/treats)
-SEASONAL_FACTORS = {
-    1: {"fruta": 0.8, "verdura": 0.9, "chocolate": 1.3, "galleta": 1.1,
-        "conserva": 1.1, "default": 0.95},
-    2: {"fruta": 0.8, "verdura": 0.9, "chocolate": 1.5, "galleta": 1.1,
-        "default": 0.95},
-    3: {"fruta": 0.9, "verdura": 1.0, "cerveza": 1.1, "default": 1.0},
-    4: {"fruta": 1.0, "verdura": 1.1, "cerveza": 1.1, "helado": 1.1,
-        "default": 1.0},
-    5: {"fruta": 1.1, "verdura": 1.1, "cerveza": 1.2, "helado": 1.3,
-        "agua": 1.2, "refres": 1.2, "default": 1.0},
-    6: {"fruta": 1.3, "verdura": 1.2, "helado": 1.5, "agua": 1.4,
-        "refres": 1.4, "cerveza": 1.4, "default": 1.0},
-    7: {"fruta": 1.4, "verdura": 1.3, "helado": 1.8, "agua": 1.6,
-        "refres": 1.5, "cerveza": 1.5, "default": 1.0},
-    8: {"fruta": 1.5, "verdura": 1.3, "helado": 1.9, "agua": 1.7,
-        "refres": 1.6, "cerveza": 1.6, "default": 0.95},
-    9: {"fruta": 1.1, "verdura": 1.1, "cereal": 1.2, "galleta": 1.1,
-        "leche": 1.1, "default": 1.05},
-    10: {"fruta": 0.9, "verdura": 1.0, "chocolate": 1.2, "galleta": 1.2,
-         "conserva": 1.1, "default": 1.0},
-    11: {"chocolate": 1.4, "galleta": 1.3, "vino": 1.2, "licor": 1.3,
-         "conserva": 1.2, "turrón": 1.8, "default": 1.05},
-    12: {"chocolate": 1.8, "galleta": 1.5, "vino": 1.6, "licor": 1.8,
-         "marisco": 1.9, "turrón": 2.5, "jamón": 1.5, "embutido": 1.4,
-         "carne": 1.3, "default": 1.15},
-}
-
-
 MONTH_NAMES_ES = {
     1: "enero", 2: "febrero", 3: "marzo", 4: "abril",
     5: "mayo", 6: "junio", 7: "julio", 8: "agosto",
@@ -104,67 +81,8 @@ MONTH_NAMES_ES = {
 
 
 # ---------------------------------------------------------------------------
-# Price parser (same as 01_augment_data.py)
-# ---------------------------------------------------------------------------
-
-def parse_eur_price(price_str) -> float:
-    """Convert '0,36 €' or '32,52 €' → float."""
-    if pd.isna(price_str) or str(price_str).strip() == "":
-        return 0.0
-    s = str(price_str).replace("€", "").replace("\xa0", "").strip()
-    s = s.replace(".", "").replace(",", ".")
-    try:
-        return float(s)
-    except ValueError:
-        return 0.0
-
-
-# ---------------------------------------------------------------------------
 # Sales / margin / width generators (category-aware heuristics)
 # ---------------------------------------------------------------------------
-
-def _category_key(category: str) -> str:
-    """Lowercase category for matching."""
-    return str(category).lower()
-
-
-def _get_seasonal_mult(month: int, category: str) -> float:
-    """Return the seasonal sales multiplier for a given month/category."""
-    factors = SEASONAL_FACTORS.get(month, {})
-    cat = _category_key(category)
-    for key, mult in factors.items():
-        if key != "default" and key in cat:
-            return mult
-    return factors.get("default", 1.0)
-
-
-# (keywords, margin_range, width_range). First match wins.
-_CATEGORY_PROFILES: list = [
-    (["fruta", "verdura", "lechuga"],                              (25, 45), (8, 25)),
-    (["pescado", "marisco", "salaz"],                              (20, 40), (10, 30)),
-    (["cerdo", "pollo", "vacuno", "cordero", "ave", "carne", "hamburguesa"],
-                                                                   (15, 35), (12, 28)),
-    (["chocolate", "galleta", "cereal", "turrón", "bollería"],     (30, 55), (5, 20)),
-    (["leche", "yogur", "queso", "mantequilla"],                   (20, 40), (6, 18)),
-    (["cerveza", "vino", "licor", "agua", "refres", "zumo"],       (25, 50), (6, 12)),
-    (["higiene", "cuidado", "gel", "champu", "desodorante", "jabón"],
-                                                                   (35, 60), (4, 10)),
-    (["perfume", "colonia", "maquillaje", "labio", "ojo"],         (40, 70), (3, 8)),
-    (["conserva", "atún", "aceite", "vinagre"],                    (25, 45), (5, 15)),
-    (["pasta", "arroz", "legumbre", "harina"],                     (20, 40), (6, 15)),
-    (["congelad", "hielo"],                                        (25, 45), (8, 22)),
-    (["pan", "pico", "tostada"],                                   (30, 50), (8, 20)),
-    (["jamón", "embutido", "bacón", "chopped", "mortadela"],       (25, 45), (8, 18)),
-]
-_DEFAULT_PROFILE = ((20, 50), (5, 20))
-
-
-def _profile_for(category: str):
-    for keywords, margin_range, width_range in _CATEGORY_PROFILES:
-        if any(k in category for k in keywords):
-            return margin_range, width_range
-    return _DEFAULT_PROFILE
-
 
 def generate_sales_data(row: pd.Series, rng: np.random.RandomState,
                         month: int) -> dict:
@@ -173,16 +91,16 @@ def generate_sales_data(row: pd.Series, rng: np.random.RandomState,
     and product_width_cm for a single product in a given month.
     """
     price = row["price_numeric"]
-    category = _category_key(row["Category"])
+    category = row["Category"]
 
     base_sales = max(10, int(300 / (price + 0.1)))
     noise = rng.uniform(0.7, 1.3)
     sales = int(base_sales * noise)
 
-    seasonal_mult = _get_seasonal_mult(month, row["Category"])
+    seasonal_mult = get_seasonal_mult(month, category)
     sales = max(1, int(sales * seasonal_mult))
 
-    margin_range, width_range = _profile_for(category)
+    margin_range, width_range = profile_for(category)
     margin = round(rng.uniform(*margin_range), 1)
     width = round(rng.uniform(*width_range), 1)
 
@@ -200,14 +118,14 @@ def generate_sales_data(row: pd.Series, rng: np.random.RandomState,
 # OpenRouter LLM augmentation
 # ---------------------------------------------------------------------------
 
-def llm_augment_batch(batch_df: pd.DataFrame, client, month: int, year: int,
-                      model: str = MODEL_NAME) -> List[Dict]:
+def llm_augment_batch(batch_df: pd.DataFrame, month: int, year: int,
+                      model: str | None = None) -> List[Dict]:
     """
     Send a batch of products to the LLM and parse JSON estimates.
     Uses the shared multi-model failover cascade in utils.llm_client so a
     single model going down does not stop the run.
     """
-    from utils.llm_client import chat_with_failover
+    from utils.llm_client import chat_with_failover, resolve_models
 
     month_es = MONTH_NAMES_ES.get(month, str(month))
 
@@ -241,12 +159,11 @@ No markdown, no explanation, just the JSON array."""
     # Start with the caller's preferred model, then fall through to the
     # rest of the built-in cascade. `resolve_models` applies the env
     # override when set.
-    from utils.llm_client import resolve_models
     cascade = resolve_models()
     if model and model not in cascade:
-        cascade = [model] + cascade
+        cascade = [model, *cascade]
     elif model:
-        cascade = [model] + [m for m in cascade if m != model]
+        cascade = [model, *(m for m in cascade if m != model)]
 
     content = chat_with_failover(
         prompt, api_key=api_key, models=cascade, max_tokens=5000,
@@ -254,7 +171,7 @@ No markdown, no explanation, just the JSON array."""
 
     if content:
         try:
-            json_match = re.search(r'\[.*\]', content, re.DOTALL)
+            json_match = re.search(r"\[.*\]", content, re.DOTALL)
             raw = json_match.group(0) if json_match else content
             results = json.loads(raw)
 
@@ -291,55 +208,6 @@ No markdown, no explanation, just the JSON array."""
 
 
 # ---------------------------------------------------------------------------
-# Shelf assignment & constraint enforcement
-# ---------------------------------------------------------------------------
-
-def assign_shelves(df: pd.DataFrame, rng: np.random.RandomState) -> pd.DataFrame:
-    """Assign rack_id (by category) and random shelf_level 1-7."""
-    categories = df["Category"].unique().tolist()
-    cat_to_rack = {cat: i for i, cat in enumerate(categories)}
-    df["rack_id"] = df["Category"].map(cat_to_rack)
-    df["shelf_level"] = [rng.randint(1, NUM_SHELVES + 1) for _ in range(len(df))]
-    return df
-
-
-def enforce_shelf_constraint(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Move products off shelves that exceed 300cm total width.
-    Overflow products are moved to the shelf with the most remaining space.
-    """
-    df = df.copy()
-    for (rack_id, shelf_level), group in df.groupby(["rack_id", "shelf_level"]):
-        total_w = group["product_width_cm"].sum()
-        if total_w <= SHELF_WIDTH_CM:
-            continue
-
-        # Sort by width descending — move widest products first
-        sorted_idx = group.sort_values("product_width_cm", ascending=False).index
-        current_w = total_w
-        for idx in sorted_idx:
-            if current_w <= SHELF_WIDTH_CM:
-                break
-            # Find the shelf (same rack) with the most free space
-            rack_df = df[df["rack_id"] == rack_id]
-            space_by_shelf = {}
-            for s in range(1, NUM_SHELVES + 1):
-                used = rack_df[rack_df["shelf_level"] == s]["product_width_cm"].sum()
-                space_by_shelf[s] = SHELF_WIDTH_CM - used
-            # Pick shelf with most space (excluding current shelf)
-            best_shelf = max(
-                (s for s in space_by_shelf if s != shelf_level),
-                key=lambda s: space_by_shelf[s],
-                default=shelf_level,
-            )
-            pw = df.at[idx, "product_width_cm"]
-            if space_by_shelf.get(best_shelf, 0) >= pw:
-                df.at[idx, "shelf_level"] = best_shelf
-                current_w -= pw
-    return df
-
-
-# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -349,10 +217,18 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     df_all = _load_catalogue(Path(args.input))
-    client = _setup_llm_client(args)
+
+    if args.use_llm:
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            print("ERROR: Set OPENROUTER_API_KEY in your .env or environment.")
+            sys.exit(1)
+        print("LLM mode enabled (OpenRouter API)")
+    else:
+        print("Heuristic mode (no API calls)")
 
     for year, month, month_name in MONTHS:
-        _generate_month(args, df_all, output_dir, client, year, month, month_name)
+        _generate_month(args, df_all, output_dir, year, month, month_name)
 
     print(f"\nDone. Generated {len(MONTHS)} monthly datasets in {output_dir}/")
     print("   Files:")
@@ -392,28 +268,7 @@ def _load_catalogue(input_path: Path) -> pd.DataFrame:
     return df_all
 
 
-def _setup_llm_client(args):
-    if not args.use_llm:
-        print("Heuristic mode (no API calls)")
-        return None
-    try:
-        from openai import OpenAI
-    except ImportError:
-        print("ERROR: Install openai package: pip install openai")
-        sys.exit(1)
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    if not api_key:
-        print("ERROR: Set OPENROUTER_API_KEY in your .env or environment.")
-        sys.exit(1)
-    print("LLM mode enabled (OpenRouter API)")
-    return OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=api_key,
-        timeout=30,
-    )
-
-
-def _generate_month(args, df_all, output_dir, client, year, month, month_name):
+def _generate_month(args, df_all, output_dir, year, month, month_name):
     print(f"\n{'='*60}")
     print(f"Generating {month_name.capitalize()} {year}...")
     print(f"{'='*60}")
@@ -429,8 +284,8 @@ def _generate_month(args, df_all, output_dir, client, year, month, month_name):
 
     df_month = _sample_products(df_all, rng, args.min_pct, args.max_pct)
 
-    if args.use_llm and client is not None:
-        _augment_via_llm(df_month, client, rng, month, year)
+    if args.use_llm:
+        _augment_via_llm(df_month, rng, month, year)
     else:
         _augment_via_heuristic(df_month, rng, month)
 
@@ -468,10 +323,10 @@ def _augment_via_heuristic(df_month, rng, month):
                    for idx in df_month.index]
     aug_df = pd.DataFrame(aug_records)
     for col in aug_df.columns:
-        df_month[col] = aug_df[col].values
+        df_month[col] = aug_df[col].to_numpy()
 
 
-def _augment_via_llm(df_month, client, rng, month, year):
+def _augment_via_llm(df_month, rng, month, year):
     aug_cols = ["estimated_monthly_sales", "profit_margin_percentage",
                 "product_width_cm"]
     for c in aug_cols:
@@ -484,7 +339,7 @@ def _augment_via_llm(df_month, client, rng, month, year):
         start = b * BATCH_SIZE
         end = min(start + BATCH_SIZE, len(df_month))
         batch = df_month.iloc[start:end]
-        results = llm_augment_batch(batch, client, month, year)
+        results = llm_augment_batch(batch, month, year)
         return b, start, end, results
 
     completed = 0
@@ -499,7 +354,7 @@ def _augment_via_llm(df_month, client, rng, month, year):
                     for i, res in enumerate(results):
                         idx = df_month.index[start + i]
                         for k, v in res.items():
-                            df_month.at[idx, k] = v
+                            df_month.loc[idx, k] = v
                     completed += 1
                     print(f"   Batch {completed}/{n_batches} "
                           f"(products {start+1}-{end}) ... OK")
@@ -508,10 +363,10 @@ def _augment_via_llm(df_month, client, rng, month, year):
         print(f"\n\nWARNING: Interrupted at batch {completed}/{n_batches}. "
               f"Filling remaining with heuristics...")
         for idx in df_month.index:
-            if df_month.at[idx, "estimated_monthly_sales"] == 0:
+            if df_month.loc[idx, "estimated_monthly_sales"] == 0:
                 aug = generate_sales_data(df_month.loc[idx], rng, month)
                 for k, v in aug.items():
-                    df_month.at[idx, k] = v
+                    df_month.loc[idx, k] = v
 
 
 if __name__ == "__main__":
