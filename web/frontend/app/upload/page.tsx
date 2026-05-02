@@ -68,10 +68,11 @@ export default function UploadPage() {
       />
       <div className="animate-fade-in-up">
         <h1 className="text-3xl font-heading font-extrabold uppercase tracking-tight text-secondary">
-          Upload CSV Files
+          Subir archivos CSV
         </h1>
         <p className="text-muted-foreground text-sm mt-2">
-          Upload monthly sales CSVs named <code className="bg-muted px-1.5 py-0.5 rounded text-xs">sales_YYYY_MM_monthname.csv</code>
+          Sube los CSVs mensuales de ventas, con el formato
+          <code className="bg-muted px-1.5 py-0.5 rounded text-xs ml-1">sales_AAAA_MM_mes.csv</code>
         </p>
       </div>
 
@@ -94,22 +95,22 @@ export default function UploadPage() {
           onChange={(e) => e.target.files && uploadFiles(e.target.files)}
         />
         <Upload size={40} className="text-primary mx-auto mb-3" />
-        <p className="font-medium">Drop CSV files here or click to browse</p>
-        <p className="text-xs text-muted-foreground mt-1">Accepts sales_*.csv files</p>
-        {uploading && <p className="text-sm text-amber-600 mt-2">Uploading…</p>}
+        <p className="font-medium">Arrastra los archivos CSV aquí o haz clic para seleccionarlos</p>
+        <p className="text-xs text-muted-foreground mt-1">Solo se aceptan archivos con el patrón sales_*.csv</p>
+        {uploading && <p className="text-sm text-amber-600 mt-2">Subiendo…</p>}
       </div>
 
       {/* File list */}
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="text-sm flex items-center justify-between">
-            Uploaded files
+            Archivos subidos
             <Badge variant="secondary">{files.length}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {files.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No files uploaded yet.</p>
+            <p className="text-sm text-muted-foreground">Aún no se ha subido ningún archivo.</p>
           ) : (
             <div className="space-y-1">
               {files.map((f) => (
@@ -122,7 +123,7 @@ export default function UploadPage() {
                     onClick={() => deleteFile(f.name)}
                     className="text-xs text-destructive hover:underline"
                   >
-                    Delete
+                    Eliminar
                   </button>
                 </div>
               ))}

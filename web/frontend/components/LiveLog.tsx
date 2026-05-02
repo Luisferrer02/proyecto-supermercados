@@ -73,7 +73,7 @@ export function LiveLog({ url, onDone, autoStart = true }: Props) {
         {active && (
           <span className="inline-flex items-center gap-1.5 text-xs text-amber-600">
             <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-            Running…
+            En ejecución…
           </span>
         )}
         {!active && lines.length > 0 && (
@@ -84,7 +84,7 @@ export function LiveLog({ url, onDone, autoStart = true }: Props) {
       </div>
       <div className="bg-secondary rounded-lg p-4 h-72 overflow-y-auto font-mono text-xs leading-5 border border-border">
         {lines.length === 0 && (
-          <span className="text-secondary-foreground/60">Waiting for output…</span>
+          <span className="text-secondary-foreground/60">Esperando salida…</span>
         )}
         {lines.map((l, i) => (
           <div
