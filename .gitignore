@@ -21,3 +21,5 @@ mlops/results/*.pth
 mlops/results/*.png
 mlops/results/*.json
 mlops/results/*.csv
+
+*.egg-info/
