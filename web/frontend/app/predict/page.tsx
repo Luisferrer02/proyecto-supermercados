@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LiveLog } from "@/components/LiveLog";
 import { ShelfMap, type Product } from "@/components/ShelfMap";
+import { ShelfSankey } from "@/components/ShelfSankey";
 import { api } from "@/lib/api";
 
 interface RackSummary {
@@ -40,6 +41,12 @@ interface PredictResult {
   explanations?: ExplanationsPayload | null;
 }
 
+interface Movement { from: number; to: number; count: number }
+
+interface OptimizeAggregate {
+  movements?: Movement[];
+}
+
 export default function PredictPage() {
   const [month, setMonth] = useState("2026-01");
   const [category, setCategory] = useState("");
@@ -49,6 +56,7 @@ export default function PredictPage() {
   const [showLog, setShowLog] = useState(false);
   const [predError, setPredError] = useState<string | null>(null);
   const [results, setResults] = useState<PredictResult | null>(null);
+  const [aggregate, setAggregate] = useState<OptimizeAggregate | null>(null);
   const [selectedRack, setSelectedRack] = useState("");
   const [pastMonths, setPastMonths] = useState<string[]>([]);
 
@@ -62,21 +70,30 @@ export default function PredictPage() {
     setShowLog(true);
     setPredError(null);
     setResults(null);
+    setAggregate(null);
   };
 
   const loadResults = async () => {
     try {
       const d = await api.predictResults(month);
       if (!d || d.error || !Array.isArray(d.products)) {
-        setPredError(d?.error ?? "Prediction finished but no results were saved. Check the log above for details.");
+        setPredError(d?.error ?? "La predicción terminó pero no se guardaron resultados. Mira el log de arriba para más detalles.");
         return;
       }
       setPredError(null);
       setResults(d);
       const racks = [...new Set(d.products.map((p: Product) => p.rack_id ?? p.Category ?? ""))].filter(Boolean);
       setSelectedRack((racks[0] as string) ?? "");
+
+      // Reuse the aggregate endpoint that powers the home page sankey.
+      // It reads the same optimised CSV that 05_predict.py just wrote, so
+      // movements/KPIs are available without duplicating logic here.
+      try {
+        const agg = await api.optimizeResults(month);
+        if (agg && Array.isArray(agg.movements)) setAggregate(agg);
+      } catch { /* aggregate is best-effort, the page still works without it */ }
     } catch {
-      setPredError("Could not load results from the server.");
+      setPredError("No se pudieron cargar los resultados del servidor.");
     }
   };
 
@@ -84,9 +101,23 @@ export default function PredictPage() {
     (p) => (p.rack_id ?? p.Category ?? "") === selectedRack
   ) ?? [];
 
-  const rackIds = results?.products
-    ? ([...new Set(results.products.map((p) => p.rack_id ?? p.Category ?? ""))].filter(Boolean) as string[])
-    : [];
+  // For each unique rack present in the results, look up a representative
+  // category name. This way the dropdown shows e.g. "Rack 47 — Aves y jamón
+  // cocido" instead of the bare numeric id, which made the long list
+  // impossible to scan.
+  const rackOptions = useMemo(() => {
+    if (!results?.products) return [] as { id: string; label: string }[];
+    const m = new Map<string, string>();
+    for (const p of results.products) {
+      const id = (p.rack_id ?? p.Category ?? "").toString();
+      if (!id || m.has(id)) continue;
+      const cat = (p.Category ?? "").toString().trim();
+      m.set(id, cat ? `Rack ${id} — ${cat}` : `Rack ${id}`);
+    }
+    return [...m.entries()]
+      .sort((a, b) => Number(a[0]) - Number(b[0]) || a[0].localeCompare(b[0]))
+      .map(([id, label]) => ({ id, label }));
+  }, [results]);
 
   const topForecast = results?.forecast
     ? Object.entries(results.forecast)
@@ -96,6 +127,20 @@ export default function PredictPage() {
 
   const rackSummary = selectedRack && results?.rackSummary?.[selectedRack];
 
+  // Map rack_id → category (first category seen for that rack), so the
+  // summary table shows readable names instead of raw rack ids.
+  const rackCategoryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (results?.products) {
+      for (const p of results.products) {
+        const id = (p.rack_id ?? p.Category ?? "").toString();
+        if (!id || map.has(id)) continue;
+        if (p.Category) map.set(id, p.Category.toString());
+      }
+    }
+    return map;
+  }, [results]);
+
   return (
     <div className="space-y-8 max-w-5xl relative">
       <div
@@ -104,10 +149,11 @@ export default function PredictPage() {
       />
       <div className="animate-fade-in-up">
         <h1 className="text-3xl font-heading font-extrabold uppercase tracking-tight text-secondary">
-          Predict
+          Predicción avanzada
         </h1>
         <p className="text-muted-foreground text-sm mt-2">
-          Runs <code className="bg-muted px-1.5 py-0.5 rounded text-xs">05_predict.py</code> — RAG retrieval → LLM forecast → ensemble optimization.
+          Ejecuta el script <code className="bg-muted px-1.5 py-0.5 rounded text-xs">05_predict.py</code>:
+          recuperación RAG → predicción LLM → optimización en ensemble.
         </p>
       </div>
 
@@ -116,7 +162,7 @@ export default function PredictPage() {
         <CardContent className="pt-4 space-y-4">
           <div className="flex flex-wrap gap-4">
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Target Month</span>
+              <span className="text-xs text-muted-foreground">Mes objetivo</span>
               <input
                 type="month"
                 value={month}
@@ -125,11 +171,11 @@ export default function PredictPage() {
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Category (optional)</span>
+              <span className="text-xs text-muted-foreground">Categoría (opcional)</span>
               <input
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                placeholder="e.g. Fruta"
+                placeholder="ej. Fruta"
                 className="bg-input border border-border rounded-lg px-3 py-1.5 text-sm w-40 focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-shadow"
               />
             </label>
@@ -153,26 +199,26 @@ export default function PredictPage() {
               disabled={streaming}
               className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
             >
-              {streaming ? "Running prediction…" : "Run Prediction"}
+              {streaming ? "Ejecutando predicción…" : "Lanzar predicción"}
             </button>
             {streaming && (
               <button
                 onClick={() => { api.predictStop(); setStreaming(false); }}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
-                Stop
+                Cancelar
               </button>
             )}
 
             {pastMonths.length > 0 && (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Load past result:</span>
+                <span className="text-xs text-muted-foreground">Cargar resultado anterior:</span>
                 <select
                   className="bg-input border border-border rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-shadow"
                   onChange={(e) => { setMonth(e.target.value); setTimeout(loadResults, 100); }}
                   defaultValue=""
                 >
-                  <option value="" disabled>Select month</option>
+                  <option value="" disabled>Selecciona mes</option>
                   {pastMonths.map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
@@ -196,11 +242,30 @@ export default function PredictPage() {
 
       {results && (
         <div className="space-y-6">
+          {/* Global movement Sankey — same component used on the home
+              page so Avanzado shows the same visual grammar. The card is
+              hidden when the optimize aggregate has no movement data. */}
+          {aggregate?.movements && aggregate.movements.length > 0 && (
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-sm">
+                  Reorganización de productos por balda
+                  <span className="block text-xs font-normal text-muted-foreground mt-0.5">
+                    Vista global de cuántos productos cambian de balda en toda la tienda
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ShelfSankey movements={aggregate.movements} />
+              </CardContent>
+            </Card>
+          )}
+
           {/* Forecast multipliers */}
           {topForecast.length > 0 && (
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle className="text-sm">Sales Forecast Adjustments (top categories)</CardTitle>
+                <CardTitle className="text-sm">Ajustes estacionales por categoría (top 12)</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -257,25 +322,28 @@ export default function PredictPage() {
             </Card>
           ) : null}
 
-          {/* Shelf Map */}
+          {/* Per-rack detail — Shelf Map */}
           <Card className="shadow-sm">
             <CardHeader>
               <div className="flex items-center gap-3 flex-wrap">
-                <CardTitle className="text-sm">Shelf Map</CardTitle>
+                <CardTitle className="text-sm">Detalle por estantería</CardTitle>
                 <select
                   value={selectedRack}
                   onChange={(e) => setSelectedRack(e.target.value)}
-                  className="bg-input border border-border rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-shadow"
+                  className="bg-input border border-border rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-shadow max-w-xs"
                 >
-                  {rackIds.map((id) => (
-                    <option key={id} value={id}>{id}</option>
+                  {rackOptions.map((o) => (
+                    <option key={o.id} value={o.id}>{o.label}</option>
                   ))}
                 </select>
+                <span className="text-xs text-muted-foreground">
+                  {rackOptions.length} estanterías
+                </span>
                 {rackSummary && (
                   <span className="text-xs text-muted-foreground">
-                    {rackSummary.products} products ·{" "}
-                    <span className="text-green-600">
-                      +€{Math.round(rackSummary.optimized - rackSummary.original).toLocaleString()} lift
+                    {rackSummary.products} productos ·{" "}
+                    <span className={rackSummary.optimized >= rackSummary.original ? "text-green-600" : "text-red-600"}>
+                      {rackSummary.optimized >= rackSummary.original ? "+" : ""}€{Math.round(rackSummary.optimized - rackSummary.original).toLocaleString()} mejora
                     </span>
                   </span>
                 )}
@@ -290,17 +358,22 @@ export default function PredictPage() {
           {results.rackSummary && Object.keys(results.rackSummary).length > 0 && (
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle className="text-sm">Profit Summary by Rack (top 20)</CardTitle>
+                <CardTitle className="text-sm">
+                  Resumen de beneficio por estantería (top 20)
+                  <span className="block text-xs font-normal text-muted-foreground mt-0.5">
+                    Pulsa una fila para ver el detalle de esa estantería
+                  </span>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-border text-muted-foreground">
-                      <th className="text-left pb-2">Rack / Category</th>
-                      <th className="text-right pb-2">Products</th>
-                      <th className="text-right pb-2">Original €</th>
-                      <th className="text-right pb-2">Optimized €</th>
-                      <th className="text-right pb-2">Lift</th>
+                      <th className="text-left pb-2">Estantería / Categoría</th>
+                      <th className="text-right pb-2">Productos</th>
+                      <th className="text-right pb-2">Antes (€)</th>
+                      <th className="text-right pb-2">Optimizado (€)</th>
+                      <th className="text-right pb-2">Mejora</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -309,13 +382,15 @@ export default function PredictPage() {
                       .slice(0, 20)
                       .map(([rack, s]) => {
                         const lift = s.optimized - s.original;
+                        const cat = rackCategoryMap.get(rack);
+                        const label = cat ? `Rack ${rack} — ${cat}` : `Rack ${rack}`;
                         return (
                           <tr
                             key={rack}
                             className={`border-b border-border last:border-0 cursor-pointer hover:bg-accent/30 ${selectedRack === rack ? "bg-accent/30" : ""}`}
                             onClick={() => setSelectedRack(rack)}
                           >
-                            <td className="py-1.5 font-medium">{rack}</td>
+                            <td className="py-1.5 font-medium">{label}</td>
                             <td className="text-right text-muted-foreground">{s.products}</td>
                             <td className="text-right">€{Math.round(s.original).toLocaleString()}</td>
                             <td className="text-right">€{Math.round(s.optimized).toLocaleString()}</td>
@@ -335,7 +410,7 @@ export default function PredictPage() {
 
       {!results && !streaming && !showLog && (
         <div className="text-sm text-muted-foreground">
-          Run ingestion first to build the knowledge base, then run a prediction.
+          Lanza la ingesta primero para construir la base de conocimiento; después ejecuta una predicción.
         </div>
       )}
     </div>
