@@ -10,7 +10,7 @@ Uses sentence-transformers for embedding and ChromaDB for storage.
 
 import re
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import pandas as pd
 
@@ -82,10 +82,10 @@ class ShelfKnowledgeBase:
     """ChromaDB-backed knowledge base for monthly sales data."""
 
     def __init__(self, persist_dir: Optional[str] = None):
-        import chromadb
-
         self.persist_dir = persist_dir or str(KB_DIR)
         Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
+
+        import chromadb
 
         self.client = chromadb.PersistentClient(path=self.persist_dir)
         self.collection = self.client.get_or_create_collection(
@@ -99,6 +99,7 @@ class ShelfKnowledgeBase:
         """Lazy-load the embedding model."""
         if self._embedder is None:
             from sentence_transformers import SentenceTransformer
+
             self._embedder = SentenceTransformer(
                 "paraphrase-multilingual-MiniLM-L12-v2"
             )
@@ -258,20 +259,6 @@ class ShelfKnowledgeBase:
         if category:
             df = df[df["Category"] == category].copy()
         return df
-
-    def get_all_months_data(self, csv_dir: str | Path) -> List[pd.DataFrame]:
-        """Load all monthly CSVs and return as list of DataFrames."""
-        csv_dir = Path(csv_dir)
-        csv_files = sorted(csv_dir.glob("sales_*.csv"))
-        dfs = []
-        for f in csv_files:
-            df = pd.read_csv(f)
-            meta = parse_month_from_filename(f.name)
-            if meta:
-                df["_year"] = meta[0]
-                df["_month"] = meta[1]
-            dfs.append(df)
-        return dfs
 
     def stats(self) -> Dict:
         """Return knowledge base statistics."""

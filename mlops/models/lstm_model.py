@@ -9,7 +9,7 @@ Output : Per-product profit lift predictions  (batch, seq_len)
 """
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class ProfitLiftLSTM(nn.Module):

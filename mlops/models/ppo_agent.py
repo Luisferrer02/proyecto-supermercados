@@ -7,20 +7,19 @@ PPO Reinforcement Learning Agent for Shelf Optimization
 - **Agent**: Actor-Critic MLP with PPO clipped objective.
 """
 
+import os
+import sys
+from typing import List, Tuple
+
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.optim as optim
-from typing import Tuple, List
+from torch import nn, optim
 
-import sys
-import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from utils.retail_physics import (
-    compute_product_profit,
     NUM_SHELVES,
+    compute_product_profit,
 )
-
 
 # ---------------------------------------------------------------------------
 # Custom Gym-like Environment
@@ -52,7 +51,7 @@ class RackEnv:
 
     def reset(self) -> np.ndarray:
         """Random initial shelf assignment."""
-        self.shelf_levels = np.random.randint(1, NUM_SHELVES + 1, size=self.n)
+        self.shelf_levels = np.random.default_rng().integers(1, NUM_SHELVES + 1, size=self.n)
         self.step_count = 0
         return self._get_state()
 
@@ -179,7 +178,7 @@ class PPOTrainer:
         """Run PPO training loop. Returns list of episode rewards."""
         episode_rewards = []
 
-        for ep in range(n_episodes):
+        for _ep in range(n_episodes):
             state = self.env.reset()
             done = False
             ep_reward = 0.0
@@ -207,7 +206,7 @@ class PPOTrainer:
             # -- compute returns & advantages --------------------------------
             returns = []
             discounted = 0.0
-            for r, d in zip(reversed(rewards), reversed(dones)):
+            for r, d in zip(reversed(rewards), reversed(dones), strict=True):
                 if d:
                     discounted = 0.0
                 discounted = r + self.gamma * discounted
@@ -227,7 +226,7 @@ class PPOTrainer:
             for _ in range(self.k_epochs):
                 new_log_probs = []
                 new_values = []
-                for i, (s, a) in enumerate(zip(states_t, actions)):
+                for s, a in zip(states_t, actions, strict=True):
                     flat = s.unsqueeze(0)
                     logits, v = self.policy(flat)
                     logits = torch.clamp(logits, -20, 20)

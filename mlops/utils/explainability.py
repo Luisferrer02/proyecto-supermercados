@@ -9,8 +9,8 @@ For each moved product, we surface at most 3 reasons chosen among:
 
   - margin_premium      product's margin is above rack median
   - sales_volume        product's sales are above rack median
-  - eye_level_promotion moved into shelves 3–5 (prime location)
-  - relegated_low_return moved out of shelves 3–5 (low margin×sales)
+  - eye_level_promotion moved into shelves 3-5 (prime location)
+  - relegated_low_return moved out of shelves 3-5 (low margin x sales)
   - crowding_relief     old shelf was overcrowded
   - space_fit           width of the product suits the new shelf
 
@@ -38,7 +38,6 @@ from __future__ import annotations
 from typing import Dict, List
 
 import pandas as pd
-
 
 EYE_LEVEL = {3, 4, 5}
 CROWDING_THRESHOLD = 6  # products on a single shelf
@@ -117,16 +116,15 @@ def explain_rack(original_rack: pd.DataFrame,
                 "code": "relegated_low_return",
                 "text": f"Liberó espacio en balda a la altura de los ojos "
                         f"(dejó el nivel {orig_shelf}) para otros productos "
-                        f"con mejor ratio margen × ventas.",
+                        f"con mejor ratio margen x ventas.",
             })
-        else:
-            # Within-tier move
-            if new_shelf < orig_shelf and new_shelf in EYE_LEVEL:
-                reasons.append({
-                    "code": "eye_level_promotion",
-                    "text": f"Reubicado al nivel {new_shelf} (zona premium) "
-                            f"para aprovechar mejor su visibilidad.",
-                })
+        # Within-tier move
+        elif new_shelf < orig_shelf and new_shelf in EYE_LEVEL:
+            reasons.append({
+                "code": "eye_level_promotion",
+                "text": f"Reubicado al nivel {new_shelf} (zona premium) "
+                        f"para aprovechar mejor su visibilidad.",
+            })
 
         # Margin premium
         if margin > margin_median * 1.15 and margin > 15:

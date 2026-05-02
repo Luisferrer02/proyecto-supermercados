@@ -9,8 +9,9 @@ Output : Per-product profit lift predictions (batch, n_products)
 """
 
 import math
+
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class PositionalEncoding(nn.Module):

@@ -23,13 +23,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import torch
-
 
 MANIFEST_FILENAME = "manifest.json"
 
@@ -68,7 +66,7 @@ def save_model(
 
     state = model.state_dict()
     short_hash = _state_dict_hash(state)
-    ts = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
     archive_name = f"{name}_{ts}_{short_hash}.pth"
     archive_path = models_dir / archive_name
@@ -110,13 +108,3 @@ def _append_manifest(models_dir: Path, record: Dict[str, Any]) -> None:
         encoding="utf-8",
     )
 
-
-def list_versions(results_dir: Path, name: Optional[str] = None) -> list:
-    """Return the manifest entries, optionally filtered by model name."""
-    manifest_path = Path(results_dir) / "models" / MANIFEST_FILENAME
-    if not manifest_path.exists():
-        return []
-    history = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if name:
-        history = [h for h in history if h.get("name") == name]
-    return history

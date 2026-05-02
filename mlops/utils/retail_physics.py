@@ -11,10 +11,10 @@ Complex dynamics that ML models can learn but Greedy cannot:
   4. Diminishing returns — eye-level benefit decreases as the shelf fills up
 """
 
-import numpy as np
-import pandas as pd
 from typing import Dict, List, Tuple
 
+import numpy as np
+import pandas as pd
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -48,7 +48,7 @@ def compute_product_profit(price: float,
                            shelf_level: int) -> float:
     """
     Basic product profit (used for simple calculations).
-    profit = price × (margin / 100) × sales × shelf_multiplier
+    profit = price * (margin / 100) * sales * shelf_multiplier
     """
     multiplier = get_shelf_multiplier(shelf_level)
     return price * (margin_pct / 100.0) * monthly_sales * multiplier
@@ -166,13 +166,13 @@ def enforce_shelf_constraint(df: pd.DataFrame) -> pd.DataFrame:
             for idx in overflow_idx:
                 if total <= SHELF_WIDTH_CM:
                     break
-                w = df.at[idx, "product_width_cm"]
+                w = df.loc[idx, "product_width_cm"]
                 for alt_shelf in range(1, NUM_SHELVES + 1):
                     if alt_shelf == shelf:
                         continue
                     alt_total = check_shelf_width(df, rack_id, alt_shelf)
                     if alt_total + w <= SHELF_WIDTH_CM:
-                        df.at[idx, "shelf_level"] = alt_shelf
+                        df.loc[idx, "shelf_level"] = alt_shelf
                         total -= w
                         break
     return df
@@ -253,11 +253,11 @@ def optimize_rack_greedy(df_rack: pd.DataFrame) -> pd.DataFrame:
     )
     df_opt = df_opt.sort_values("_base_profit", ascending=False)
 
-    capacity = {s: SHELF_WIDTH_CM for s in range(1, NUM_SHELVES + 1)}
+    capacity = dict.fromkeys(range(1, NUM_SHELVES + 1), SHELF_WIDTH_CM)
 
     for idx in df_opt.index:
-        w = df_opt.at[idx, "product_width_cm"]
-        best_shelf = df_opt.at[idx, "shelf_level"]
+        w = df_opt.loc[idx, "product_width_cm"]
+        best_shelf = df_opt.loc[idx, "shelf_level"]
         best_mult = get_shelf_multiplier(best_shelf)
 
         for s in range(1, NUM_SHELVES + 1):
@@ -266,8 +266,7 @@ def optimize_rack_greedy(df_rack: pd.DataFrame) -> pd.DataFrame:
                 best_shelf = s
                 best_mult = m
 
-        df_opt.at[idx, "shelf_level"] = best_shelf
+        df_opt.loc[idx, "shelf_level"] = best_shelf
         capacity[best_shelf] -= w
 
-    df_opt.drop(columns=["_base_profit"], inplace=True)
-    return df_opt
+    return df_opt.drop(columns=["_base_profit"])

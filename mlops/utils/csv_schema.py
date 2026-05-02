@@ -14,12 +14,12 @@ from multiple threads.
 
 from __future__ import annotations
 
+import argparse
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
 import pandas as pd
-
 
 # ---------------------------------------------------------------------------
 # Schema definition
@@ -69,10 +69,8 @@ class ValidationResult:
     def format(self) -> str:
         lines = [f"[{'OK' if self.ok else 'FAIL'}] {self.path}"]
         lines.append(f"  rows: {self.row_count}")
-        for e in self.errors:
-            lines.append(f"  ERROR: {e}")
-        for w in self.warnings:
-            lines.append(f"  WARN:  {w}")
+        lines.extend(f"  ERROR: {e}" for e in self.errors)
+        lines.extend(f"  WARN:  {w}" for w in self.warnings)
         return "\n".join(lines)
 
 
@@ -160,9 +158,7 @@ def validate_directory(csv_dir: str | Path) -> List[ValidationResult]:
     if not d.exists():
         return [ValidationResult(path=str(d), ok=False,
                                  errors=["Directory does not exist"])]
-    results = []
-    for p in sorted(d.glob("sales_*.csv")):
-        results.append(validate_csv(p))
+    results = [validate_csv(p) for p in sorted(d.glob("sales_*.csv"))]
     if not results:
         results.append(ValidationResult(
             path=str(d), ok=False,
@@ -193,7 +189,6 @@ def all_ok(results: List[ValidationResult]) -> bool:
 # ---------------------------------------------------------------------------
 
 def _main(argv: Optional[List[str]] = None) -> int:
-    import argparse
     parser = argparse.ArgumentParser(
         description="Validate monthly sales CSVs against the expected schema"
     )
@@ -201,10 +196,7 @@ def _main(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     target = Path(args.path)
-    if target.is_dir():
-        results = validate_directory(target)
-    else:
-        results = [validate_csv(target)]
+    results = validate_directory(target) if target.is_dir() else [validate_csv(target)]
 
     print(format_report(results))
     return 0 if all_ok(results) else 1

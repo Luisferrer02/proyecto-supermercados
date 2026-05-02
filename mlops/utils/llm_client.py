@@ -27,6 +27,7 @@ import random
 import time
 from typing import Iterable, List, Optional
 
+from openai import OpenAI
 
 # Ordered cascade of free-tier OpenRouter models to try. When the first
 # one fails (429, 5xx, timeout, bad JSON, empty string, etc.) the client
@@ -79,8 +80,6 @@ def chat_with_failover(
     ``None`` if every model failed. Never raises — the caller is expected
     to treat ``None`` as "fall back to heuristic".
     """
-    from openai import OpenAI
-
     candidates = resolve_models(models)
     if not api_key:
         logger("     No OPENROUTER_API_KEY — skipping LLM cascade.")
