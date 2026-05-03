@@ -30,6 +30,26 @@ BATCH = 128
 LR = 5e-4
 
 
+class FeatureNormalizer:
+    """Z-score normalizer: (x - mean) / std. Fit on train, apply to all."""
+
+    def __init__(self):
+        self.mean: torch.Tensor | None = None
+        self.std: torch.Tensor | None = None
+
+    def fit(self, X: torch.Tensor) -> "FeatureNormalizer":
+        self.mean = X.mean(dim=0)
+        self.std = X.std(dim=0).clamp(min=1e-8)
+        return self
+
+    def transform(self, X: torch.Tensor) -> torch.Tensor:
+        return (X - self.mean) / self.std
+
+    def fit_transform(self, X: torch.Tensor) -> torch.Tensor:
+        self.fit(X)
+        return self.transform(X)
+
+
 def df_to_tensors(data_df: pd.DataFrame) -> tuple[torch.Tensor, torch.Tensor]:
     """Convert DataFrame to (features, targets) float tensors."""
     X = torch.FloatTensor(data_df[FEATURE_COLS].to_numpy().copy())
@@ -127,6 +147,7 @@ def optimize_rack_mlp(
     num_shelves: int,
     shelf_width_cm: float,
     noise_scale: float = 0.0,
+    normalizer: "FeatureNormalizer | None" = None,
 ) -> pd.DataFrame:
     """Greedy MLP-guided shelf assignment for a single rack.
 
@@ -171,6 +192,8 @@ def optimize_rack_mlp(
                 shelf_counts.get(s, 0),
                 n_shelves_used, len(result),
             ]])
+            if normalizer is not None:
+                features = normalizer.transform(features)
             with torch.no_grad():
                 lift = mlp_model(features).item()
             if noise_scale > 0:
