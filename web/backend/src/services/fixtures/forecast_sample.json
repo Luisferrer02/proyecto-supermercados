@@ -1,0 +1,8 @@
+{
+  "multipliers": {
+    "Fruta": 1.15,
+    "Lácteos": 0.95,
+    "Chocolate": 1.35
+  },
+  "_source": "heuristic"
+}

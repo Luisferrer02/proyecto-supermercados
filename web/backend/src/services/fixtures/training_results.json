@@ -1,0 +1,26 @@
+{
+  "MLP": {
+    "mse": 12.5,
+    "mse_eur2": 12.5,
+    "rmse_eur": 3.54,
+    "mae_eur": 2.8,
+    "original_profit": 5000,
+    "optimized_profit": 5500
+  },
+  "Transformer": {
+    "mse": 8.2,
+    "mse_eur2": 8.2,
+    "rmse_eur": 2.86,
+    "mae_eur": 2.1,
+    "original_profit": 5000,
+    "optimized_profit": 5800
+  },
+  "LSTM": {
+    "mse": 10.1,
+    "mse_eur2": 10.1,
+    "rmse_eur": 3.18,
+    "mae_eur": 2.5,
+    "original_profit": 5000,
+    "optimized_profit": 5600
+  }
+}

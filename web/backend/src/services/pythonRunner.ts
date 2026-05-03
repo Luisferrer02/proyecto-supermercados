@@ -2,12 +2,13 @@ import { spawn, ChildProcess } from 'child_process';
 import { Response } from 'express';
 import path from 'path';
 import fs from 'fs';
+import { mockRunPythonWithSSE, mockRunPythonChainWithSSE } from './mockPython';
 
 const MLOPS_DIR = process.env.MLOPS_DIR!;
 const PYTHON = process.env.PYTHON_PATH || 'python3';
 
 // Pick the first venv activate script that actually exists. Override via VENV_DIR.
-function resolveVenvActivate(): string {
+export function resolveVenvActivate(): string {
   const candidates = [
     process.env.VENV_DIR ? path.join(process.env.VENV_DIR, 'bin', 'activate') : '',
     path.join(MLOPS_DIR, 'venv-new', 'bin', 'activate'),
@@ -46,6 +47,10 @@ export async function runPythonChainWithSSE(
   key: string,
   steps: { name: string; script: string; args: string[] }[],
 ): Promise<void> {
+  if (process.env.MOCK_PYTHON === '1') {
+    return mockRunPythonChainWithSSE(res, key, steps);
+  }
+
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -129,6 +134,11 @@ export function runPythonWithSSE(
   scriptName: string,
   args: string[]
 ): void {
+  if (process.env.MOCK_PYTHON === '1') {
+    mockRunPythonWithSSE(res, key, scriptName, args);
+    return;
+  }
+
   // SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
