@@ -9,3 +9,4 @@ include = ["utils*", "models*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "--cov=utils --cov=models --cov-report=term-missing --cov-fail-under=70 --cov-config=.coveragerc"
