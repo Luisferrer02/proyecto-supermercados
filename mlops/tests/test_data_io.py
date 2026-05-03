@@ -114,3 +114,26 @@ class TestLoadMonthlyCsvs:
         result = load_monthly_csvs(tmp_path, add_month_cols=True)
         assert result["_year"].iloc[0] == 2025
         assert result["_month"].iloc[0] == 7
+
+    def test_with_unparseable_filename_and_add_month_cols(self, tmp_path):
+        """Test handling of files with unparseable names when add_month_cols=True."""
+        df = pd.DataFrame({"Category": ["A"], "value": [1]})
+        df.to_csv(tmp_path / "sales_wrong_name.csv", index=False)
+        result = load_monthly_csvs(tmp_path, add_month_cols=True, required=False)
+        # Should load the file but not add month columns
+        assert len(result) == 1
+        assert "_year" not in result.columns
+
+
+class TestAssignShelvesRandomState:
+    def test_assign_shelves_with_random_state(self):
+        """Test assign_shelves with np.random.RandomState (legacy)."""
+        df = pd.DataFrame({
+            "Category": ["A", "A", "B"],
+            "name": ["p1", "p2", "p3"],
+        })
+        rng = np.random.RandomState(42)
+        result = assign_shelves(df, rng)
+        assert "rack_id" in result.columns
+        assert "shelf_level" in result.columns
+        assert result["shelf_level"].between(1, 7).all()

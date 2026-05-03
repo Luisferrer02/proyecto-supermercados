@@ -51,3 +51,11 @@ class TestTransformer:
         x = torch.randn(2, 20, INPUT_DIM)
         out = model(x)
         assert out.shape == (2, 20)
+
+    def test_single_sequence(self):
+        """Test transformer with single sequence."""
+        model = build_transformer(input_dim=INPUT_DIM)
+        model.eval()  # BatchNorm requires eval for small batch
+        x = torch.randn(1, 1, INPUT_DIM)
+        out = model(x)
+        assert out.shape == (1, 1)

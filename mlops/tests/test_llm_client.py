@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
+import utils.llm_client
 from utils.llm_client import _looks_empty, chat_with_failover, resolve_models
 
 
@@ -37,14 +38,20 @@ class TestLooksEmpty:
 
 
 class TestChatWithFailover:
+    def setup_method(self):
+        """Clear the client cache before each test."""
+        utils.llm_client._cached_clients.clear()
+
     def test_no_api_key_returns_none(self):
         result = chat_with_failover("prompt", api_key="", logger=MagicMock())
         assert result is None
 
-    @patch("utils.llm_client.OpenAI")
-    def test_success_first_model(self, MockOpenAI):
+    @patch("utils.llm_client._detect_mode")
+    @patch("utils.llm_client._get_client")
+    def test_success_first_model(self, mock_get_client, mock_detect_mode):
+        mock_detect_mode.return_value = "openrouter"
         mock_client = MagicMock()
-        MockOpenAI.return_value = mock_client
+        mock_get_client.return_value = mock_client
         mock_client.chat.completions.create.return_value = MagicMock(
             choices=[MagicMock(message=MagicMock(content="result text"))]
         )
@@ -58,10 +65,12 @@ class TestChatWithFailover:
         assert result == "result text"
         mock_client.chat.completions.create.assert_called_once()
 
-    @patch("utils.llm_client.OpenAI")
-    def test_empty_response_retries(self, MockOpenAI):
+    @patch("utils.llm_client._detect_mode")
+    @patch("utils.llm_client._get_client")
+    def test_empty_response_retries(self, mock_get_client, mock_detect_mode):
+        mock_detect_mode.return_value = "openrouter"
         mock_client = MagicMock()
-        MockOpenAI.return_value = mock_client
+        mock_get_client.return_value = mock_client
         mock_client.chat.completions.create.side_effect = [
             MagicMock(choices=[MagicMock(message=MagicMock(content=""))]),
             MagicMock(choices=[MagicMock(message=MagicMock(content="ok"))]),
@@ -73,10 +82,12 @@ class TestChatWithFailover:
         assert result == "ok"
 
     @patch("utils.llm_client.time.sleep")
-    @patch("utils.llm_client.OpenAI")
-    def test_error_falls_through_to_next_model(self, MockOpenAI, mock_sleep):
+    @patch("utils.llm_client._detect_mode")
+    @patch("utils.llm_client._get_client")
+    def test_error_falls_through_to_next_model(self, mock_get_client, mock_detect_mode, mock_sleep):
+        mock_detect_mode.return_value = "openrouter"
         mock_client = MagicMock()
-        MockOpenAI.return_value = mock_client
+        mock_get_client.return_value = mock_client
         mock_client.chat.completions.create.side_effect = [
             Exception("429 rate limited"),
             MagicMock(choices=[MagicMock(message=MagicMock(content="from model-b"))]),
@@ -92,10 +103,12 @@ class TestChatWithFailover:
         assert result == "from model-b"
 
     @patch("utils.llm_client.time.sleep")
-    @patch("utils.llm_client.OpenAI")
-    def test_all_models_fail_returns_none(self, MockOpenAI, mock_sleep):
+    @patch("utils.llm_client._detect_mode")
+    @patch("utils.llm_client._get_client")
+    def test_all_models_fail_returns_none(self, mock_get_client, mock_detect_mode, mock_sleep):
+        mock_detect_mode.return_value = "openrouter"
         mock_client = MagicMock()
-        MockOpenAI.return_value = mock_client
+        mock_get_client.return_value = mock_client
         mock_client.chat.completions.create.side_effect = Exception("500 server error")
 
         result = chat_with_failover(
@@ -107,10 +120,12 @@ class TestChatWithFailover:
         )
         assert result is None
 
-    @patch("utils.llm_client.OpenAI")
-    def test_strips_whitespace(self, MockOpenAI):
+    @patch("utils.llm_client._detect_mode")
+    @patch("utils.llm_client._get_client")
+    def test_strips_whitespace(self, mock_get_client, mock_detect_mode):
+        mock_detect_mode.return_value = "openrouter"
         mock_client = MagicMock()
-        MockOpenAI.return_value = mock_client
+        mock_get_client.return_value = mock_client
         mock_client.chat.completions.create.return_value = MagicMock(
             choices=[MagicMock(message=MagicMock(content="  trimmed  \n"))]
         )

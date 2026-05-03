@@ -49,6 +49,51 @@ class TestSaveModel:
         assert record["canonical_path"] == "test_net.pth"
         assert "archive_path" in record
 
+    def test_manifest_updates_with_metadata(self, tmp_path):
+        """Test that manifest is updated with additional metadata."""
+        model = _make_model()
+        metadata = {"epochs": 100, "loss": 0.01}
+        record = save_model(model, "mlp", tmp_path, metadata=metadata)
+        
+        assert record["metadata"] == metadata
+        
+        manifest_file = tmp_path / "models" / "manifest.json"
+        assert manifest_file.exists()
+        manifest_data = json.loads(manifest_file.read_text())
+        assert isinstance(manifest_data, list)
+        assert len(manifest_data) == 1
+        assert manifest_data[0]["metadata"]["epochs"] == 100
+
+    def test_manifest_corrupted_json_recovers(self, tmp_path):
+        """Test that corrupted manifest JSON is recovered gracefully."""
+        models_dir = tmp_path / "models"
+        models_dir.mkdir()
+        manifest_file = models_dir / "manifest.json"
+        manifest_file.write_text("{ invalid json }")
+        
+        model = _make_model()
+        record = save_model(model, "mlp", tmp_path)
+        
+        # Should have recovered and created new manifest
+        new_manifest = json.loads(manifest_file.read_text())
+        assert isinstance(new_manifest, list)
+        assert len(new_manifest) == 1
+
+    def test_manifest_non_list_recovered(self, tmp_path):
+        """Test that manifest with non-list content is recovered."""
+        models_dir = tmp_path / "models"
+        models_dir.mkdir()
+        manifest_file = models_dir / "manifest.json"
+        manifest_file.write_text('{"not": "a list"}')
+        
+        model = _make_model()
+        record = save_model(model, "mlp", tmp_path)
+        
+        # Should have recovered and created list manifest
+        new_manifest = json.loads(manifest_file.read_text())
+        assert isinstance(new_manifest, list)
+        assert len(new_manifest) == 1
+
     def test_manifest_appended(self, tmp_path):
         model = _make_model()
         save_model(model, "m1", tmp_path)
