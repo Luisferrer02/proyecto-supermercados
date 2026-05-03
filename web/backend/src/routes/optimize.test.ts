@@ -165,4 +165,14 @@ describe('GET /api/optimize/results', () => {
     expect(res.body.forecastSource).toBeNull();
     expect(res.body.explanations).toBeNull();
   });
+
+  it('handles an empty monthly directory when computing baseline', async () => {
+    fs.writeFileSync(path.join(dirs.results, 'optimized_2026_03_march.csv'), OPTIMIZED_CSV);
+
+    const res = await request(app).get('/api/optimize/results').query({ month: '2026-03' });
+    expect(res.status).toBe(200);
+    expect(res.body.kpi.totalProducts).toBe(2);
+    expect(res.body.kpi.productsMoved).toBe(0);
+    expect(res.body.kpi.profitLiftEur).toBe(0);
+  });
 });

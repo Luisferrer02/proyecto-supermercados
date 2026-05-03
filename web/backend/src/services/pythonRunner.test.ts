@@ -197,6 +197,28 @@ describe('runPythonWithSSE', () => {
     expect(res.end).toHaveBeenCalled();
   });
 
+  it('uses bash when a venv activate script exists', async () => {
+    const proc = makeFakeProc();
+    mockExistsSync.mockImplementation((p: any) => {
+      const value = String(p);
+      return value.includes('venv') && value.includes('activate');
+    });
+    mockSpawn.mockReturnValueOnce(proc as any);
+    const key = uniqueKey('sse');
+    const res = makeFakeRes();
+
+    runPythonWithSSE(res, key, 'prog.py', ['--flag']);
+    expect(mockSpawn).toHaveBeenCalledWith(
+      '/bin/bash',
+      expect.arrayContaining(['-c', expect.stringContaining('source')]),
+      expect.objectContaining({ cwd: expect.any(String) }),
+    );
+
+    proc.exitCode = 0;
+    proc.emit('close', 0);
+    await flush();
+  });
+
   it('forwards stderr as log events', async () => {
     const proc = makeFakeProc();
     mockSpawn.mockReturnValueOnce(proc as any);
@@ -268,6 +290,32 @@ describe('runPythonChainWithSSE', () => {
       type: 'done',
       data: { ok: false, failedStep: 'ingest', code: 3 },
     });
+  }, 10000);
+
+  it('uses bash for chain steps when a venv activate script exists', async () => {
+    const proc = makeFakeProc();
+    mockExistsSync.mockImplementation((p: any) => {
+      const value = String(p);
+      return value.includes('venv') && value.includes('activate');
+    });
+    mockSpawn.mockReturnValueOnce(proc as any);
+
+    const key = uniqueKey('chain');
+    const res = makeFakeRes();
+    const promise = runPythonChainWithSSE(res, key, [
+      { name: 'ingest', script: 'ingest.py', args: ['--month', '2026-03'] },
+    ]);
+
+    await flush(2);
+    expect(mockSpawn).toHaveBeenCalledWith(
+      '/bin/bash',
+      expect.arrayContaining(['-c', expect.stringContaining('source')]),
+      expect.objectContaining({ cwd: expect.any(String) }),
+    );
+
+    proc.exitCode = 0;
+    proc.emit('close', 0);
+    await promise;
   }, 10000);
 
   it('rejects duplicate chain with same key', async () => {

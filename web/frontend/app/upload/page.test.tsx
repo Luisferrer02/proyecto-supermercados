@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import UploadPage from './page';
 import { setupFetchMock } from '@/mocks/handlers';
@@ -53,5 +53,41 @@ describe('UploadPage', () => {
       expect.stringContaining('/api/upload/files/sales_2025_12_december.csv'),
       expect.objectContaining({ method: 'DELETE' }),
     );
+  });
+
+  it('uploads a file through the file input', async () => {
+    const mockFetch = setupFetchMock();
+    render(<UploadPage />);
+
+    await waitFor(() => screen.getByText(/Arrastra los archivos CSV/));
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['name,price\napple,1.5'], 'sales_2026_01_january.csv', { type: 'text/csv' });
+
+    await userEvent.upload(fileInput, file);
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/upload'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+  });
+
+  it('handles drag and drop upload', async () => {
+    const mockFetch = setupFetchMock();
+    render(<UploadPage />);
+    await waitFor(() => screen.getByText(/Arrastra los archivos CSV/));
+
+    const dropZone = screen.getByText(/Arrastra los archivos CSV aquí o haz clic para seleccionarlos/).closest('div') as HTMLElement;
+    const file = new File(['name,price\napple,1.5'], 'sales_2026_01_january.csv', { type: 'text/csv' });
+
+    fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/upload'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
   });
 });

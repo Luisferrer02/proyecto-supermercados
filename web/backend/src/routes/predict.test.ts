@@ -140,6 +140,15 @@ describe('GET /api/predict/results', () => {
     const res = await request(app).get('/api/predict/results').query({ month: '2026-03' });
     expect(res.body.explanations).toEqual(explanations);
   });
+
+  it('falls back to null when explanations JSON is malformed', async () => {
+    fs.writeFileSync(path.join(dirs.results, 'optimized_2026_03_march.csv'), SAMPLE_CSV);
+    fs.writeFileSync(path.join(dirs.results, 'explanations_2026_03.json'), '{ not valid json');
+
+    const res = await request(app).get('/api/predict/results').query({ month: '2026-03' });
+    expect(res.status).toBe(200);
+    expect(res.body.explanations).toBeNull();
+  });
 });
 
 describe('GET /api/predict/list', () => {

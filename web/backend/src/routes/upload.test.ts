@@ -1,6 +1,7 @@
 import request from 'supertest';
 import path from 'path';
 import fs from 'fs';
+import { spawn } from 'child_process';
 import { EventEmitter } from 'events';
 import { createTmpDirs, cleanupTmpDirs, buildApp } from '../../tests/helpers';
 
@@ -21,6 +22,8 @@ jest.mock('child_process', () => ({
 }));
 
 import { uploadRouter } from './upload';
+
+const mockSpawn = spawn as jest.MockedFunction<typeof spawn>;
 
 let dirs: ReturnType<typeof createTmpDirs>;
 let app: ReturnType<typeof buildApp>;
@@ -96,6 +99,20 @@ describe('POST /api/upload/validate', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('valid');
     expect(res.body).toHaveProperty('report');
+  });
+
+  it('uses bash when a venv activate script exists', async () => {
+    fs.mkdirSync(path.join(dirs.base, 'venv', 'bin'), { recursive: true });
+    fs.writeFileSync(path.join(dirs.base, 'venv', 'bin', 'activate'), 'echo activated');
+    fs.writeFileSync(path.join(dirs.monthly, 'sales_2026_01_january.csv'), 'name,price\na,1');
+
+    const res = await request(app).post('/api/upload/validate');
+    expect(res.status).toBe(200);
+    expect(mockSpawn).toHaveBeenCalledWith(
+      '/bin/bash',
+      expect.arrayContaining(['-c', expect.stringContaining('python -m utils.csv_schema')]),
+      expect.objectContaining({ cwd: dirs.base }),
+    );
   });
 });
 
