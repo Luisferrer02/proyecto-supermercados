@@ -3,7 +3,7 @@
 01_generate_monthly_sales.py — Monthly Sales Dataset Generator
 ================================================================
 Reads `products_macro.csv` (Category, name, subtitle, price, discount_price)
-and creates 6 monthly sales CSVs (July-December 2025), each simulating a
+and creates 6 monthly sales CSVs (July-December 2024), each simulating a
 different month's shelf activity.
 
 Output columns per CSV:
@@ -22,14 +22,12 @@ Usage:
 """
 
 import argparse
-import json
 import os
 import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -55,22 +53,22 @@ BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_INPUT = BASE_DIR / "products_macro.csv"
 DEFAULT_OUTPUT_DIR = BASE_DIR / "data" / "monthly"
 
-BATCH_SIZE = 30
+BATCH_SIZE = 50
 
 # Months to generate
 MONTHS = [
-    (2025, 1, "january"),
-    (2025, 2, "february"),
-    (2025, 3, "march"),
-    (2025, 4, "april"),
-    (2025, 5, "may"),
-    (2025, 6, "june"),
-    (2025, 7, "july"),
-    (2025, 8, "august"),
-    (2025, 9, "september"),
-    (2025, 10, "october"),
-    (2025, 11, "november"),
-    (2025, 12, "december"),
+    (2024, 1, "january"),
+    (2024, 2, "february"),
+    (2024, 3, "march"),
+    (2024, 4, "april"),
+    (2024, 5, "may"),
+    (2024, 6, "june"),
+    (2024, 7, "july"),
+    (2024, 8, "august"),
+    (2024, 9, "september"),
+    (2024, 10, "october"),
+    (2024, 11, "november"),
+    (2024, 12, "december"),
 ]
 
 MONTH_NAMES_ES = {
@@ -119,46 +117,35 @@ def generate_sales_data(row: pd.Series, rng: np.random.RandomState,
 # ---------------------------------------------------------------------------
 
 def llm_augment_batch(batch_df: pd.DataFrame, month: int, year: int,
-                      model: str | None = None) -> List[Dict]:
-    """
-    Send a batch of products to the LLM and parse JSON estimates.
-    Uses the shared multi-model failover cascade in utils.llm_client so a
-    single model going down does not stop the run.
-    """
+                      model: str | None = None) -> list[dict]:
+    """Send a batch of products to the LLM and parse CSV estimates."""
     from utils.llm_client import chat_with_failover, resolve_models
 
     month_es = MONTH_NAMES_ES.get(month, str(month))
 
-    products_desc = []
-    for i, (_, row) in enumerate(batch_df.iterrows()):
-        products_desc.append(
-            f"{i+1}. Category: {row['Category']} | "
-            f"Name: {row['name']} | "
-            f"Subtitle: {row['subtitle']} | "
-            f"Price: {row['price']}"
-        )
-    products_text = "\n".join(products_desc)
+    products_text = "\n".join(
+        f"{i+1}. {row['Category']} | {row['name']} | {row['price']}"
+        for i, (_, row) in enumerate(batch_df.iterrows())
+    )
 
     prompt = f"""You are a retail data analyst for a Spanish supermarket.
 The month is {month_es.capitalize()} {year}.
 
-For each product below, estimate three values considering the time of year:
-1. estimated_monthly_sales: realistic units sold THIS month in a typical Spanish supermarket.
-   Consider seasonal demand (e.g. more fresh fruit in summer, more sweets/marisco in December).
-2. profit_margin_percentage: realistic profit margin % for this category (value between 5 and 70).
-3. product_width_cm: realistic shelf width in centimeters the product occupies on a shelf.
+For each product below, estimate:
+- estimated_monthly_sales (integer): units sold this month. Consider seasonal demand.
+- profit_margin_percentage (float 5-70): profit margin for this category.
+- product_width_cm (float 2-60): shelf width in cm.
 
 Products:
 {products_text}
 
-Respond ONLY with a JSON array. Each element must have exactly these keys:
-"estimated_monthly_sales" (integer), "profit_margin_percentage" (float), "product_width_cm" (float).
-No markdown, no explanation, just the JSON array."""
+Respond with EXACTLY {len(batch_df)} lines of CSV, one per product, in order.
+Format: sales,margin,width
+Example: 200,30.5,10.0
+
+No headers, no explanation, no markdown. Just the CSV lines."""
 
     api_key = os.getenv("OPENROUTER_API_KEY", "")
-    # Start with the caller's preferred model, then fall through to the
-    # rest of the built-in cascade. `resolve_models` applies the env
-    # override when set.
     cascade = resolve_models()
     if model and model not in cascade:
         cascade = [model, *cascade]
@@ -166,45 +153,39 @@ No markdown, no explanation, just the JSON array."""
         cascade = [model, *(m for m in cascade if m != model)]
 
     content = chat_with_failover(
-        prompt, api_key=api_key, models=cascade, max_tokens=5000,
+        prompt, api_key=api_key, models=cascade, max_tokens=3000,
     )
 
+    defaults = {"estimated_monthly_sales": 50, "profit_margin_percentage": 30.0, "product_width_cm": 12.0}
+
     if content:
-        try:
-            json_match = re.search(r"\[.*\]", content, re.DOTALL)
-            raw = json_match.group(0) if json_match else content
-            results = json.loads(raw)
+        results = []
+        for line in content.strip().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            # Strip leading number prefix like "1. " or "1,"
+            line = re.sub(r"^\d+[\.\)]\s*", "", line)
+            parts = line.split(",")
+            if len(parts) >= 3:
+                try:
+                    results.append({
+                        "estimated_monthly_sales": max(1, int(float(parts[0].strip()))),
+                        "profit_margin_percentage": max(1.0, min(70.0, float(parts[1].strip()))),
+                        "product_width_cm": max(2.0, min(60.0, float(parts[2].strip()))),
+                    })
+                    continue
+                except (ValueError, IndexError):
+                    pass
+            results.append(dict(defaults))
 
-            # Validate length
-            while len(results) < len(batch_df):
-                results.append({
-                    "estimated_monthly_sales": 50,
-                    "profit_margin_percentage": 30.0,
-                    "product_width_cm": 12.0,
-                })
-            results = results[:len(batch_df)]
+        # Pad if model returned fewer lines than expected
+        while len(results) < len(batch_df):
+            results.append(dict(defaults))
+        return results[:len(batch_df)]
 
-            # Sanitize values
-            for r in results:
-                r["estimated_monthly_sales"] = max(1, int(
-                    r.get("estimated_monthly_sales", 50)))
-                r["profit_margin_percentage"] = max(1.0, min(70.0, float(
-                    r.get("profit_margin_percentage", 30))))
-                r["product_width_cm"] = max(2.0, min(60.0, float(
-                    r.get("product_width_cm", 12))))
-
-            return results
-        except Exception as e:
-            print(f"\n      Could not parse LLM JSON: {e}", end="")
-
-    # Every model in the cascade failed AND no parseable JSON — defaults
     print(" [using defaults]", end="")
-    return [
-        {"estimated_monthly_sales": 50,
-         "profit_margin_percentage": 30.0,
-         "product_width_cm": 12.0}
-        for _ in range(len(batch_df))
-    ]
+    return [dict(defaults) for _ in range(len(batch_df))]
 
 
 # ---------------------------------------------------------------------------
@@ -239,7 +220,7 @@ def main():
 
 def _parse_args():
     parser = argparse.ArgumentParser(
-        description="Generate 12 monthly sales datasets (Jan-Dec 2025)")
+        description="Generate 12 monthly sales datasets (Jan-Dec 2024)")
     parser.add_argument("--input", type=str, default=str(DEFAULT_INPUT),
                         help="Path to products_macro.csv")
     parser.add_argument("--output-dir", type=str, default=str(DEFAULT_OUTPUT_DIR),
@@ -327,13 +308,17 @@ def _augment_via_heuristic(df_month, rng, month):
 
 
 def _augment_via_llm(df_month, rng, month, year):
+    from utils.llm_client import _is_local_mode
+
     aug_cols = ["estimated_monthly_sales", "profit_margin_percentage",
                 "product_width_cm"]
     for c in aug_cols:
         df_month[c] = 0.0
 
     n_batches = (len(df_month) + BATCH_SIZE - 1) // BATCH_SIZE
-    max_workers = 4
+    # Local models can only process one request at a time
+    use_threads = not _is_local_mode()
+    max_workers = 4 if use_threads else 1
 
     def process_batch(b):
         start = b * BATCH_SIZE
@@ -342,23 +327,32 @@ def _augment_via_llm(df_month, rng, month, year):
         results = llm_augment_batch(batch, month, year)
         return b, start, end, results
 
+    def _apply_results(start, end, results):
+        for col in aug_cols:
+            df_month.iloc[start:end, df_month.columns.get_loc(col)] = [r[col] for r in results]
+
     completed = 0
     try:
-        for chunk_start in range(0, n_batches, max_workers):
-            chunk_end = min(chunk_start + max_workers, n_batches)
-            batch_indices = list(range(chunk_start, chunk_end))
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = {executor.submit(process_batch, b): b for b in batch_indices}
-                for future in as_completed(futures):
-                    _, start, end, results = future.result()
-                    for i, res in enumerate(results):
-                        idx = df_month.index[start + i]
-                        for k, v in res.items():
-                            df_month.loc[idx, k] = v
-                    completed += 1
-                    print(f"   Batch {completed}/{n_batches} "
-                          f"(products {start+1}-{end}) ... OK")
-            time.sleep(1)
+        if use_threads:
+            for chunk_start in range(0, n_batches, max_workers):
+                chunk_end = min(chunk_start + max_workers, n_batches)
+                batch_indices = list(range(chunk_start, chunk_end))
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    futures = {executor.submit(process_batch, b): b for b in batch_indices}
+                    for future in as_completed(futures):
+                        _, start, end, results = future.result()
+                        _apply_results(start, end, results)
+                        completed += 1
+                        print(f"   Batch {completed}/{n_batches} "
+                              f"(products {start+1}-{end}) ... OK")
+                time.sleep(1)
+        else:
+            for b in range(n_batches):
+                _, start, end, results = process_batch(b)
+                _apply_results(start, end, results)
+                completed += 1
+                print(f"   Batch {completed}/{n_batches} "
+                      f"(products {start+1}-{end}) ... OK")
     except KeyboardInterrupt:
         print(f"\n\nWARNING: Interrupted at batch {completed}/{n_batches}. "
               f"Filling remaining with heuristics...")

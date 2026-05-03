@@ -37,7 +37,7 @@ from utils.retail_physics import (
     SHELF_WIDTH_CM,
     compute_rack_profit,
 )
-from utils.training import FEATURE_COLS, optimize_rack_mlp
+from utils.training import FEATURE_COLS, FeatureNormalizer, optimize_rack_mlp
 
 load_dotenv()
 
@@ -82,23 +82,24 @@ def _build_forecast_prompt(target_year: int, target_month: int,
                             context: dict, base_products: pd.DataFrame) -> str:
     month_name = MONTH_NAMES.get(target_month, str(target_month))
 
-    context_text = "\n".join(
-        f"### Data from {month_key}\n" + "\n".join(f"- {doc}" for doc in data["documents"])
-        for month_key, data in sorted(context.items())
-    )
+    # Limit RAG context to top 20 categories per month to keep prompt ~4K tokens
+    context_lines = []
+    for month_key, data in sorted(context.items()):
+        docs = data["documents"]
+        scored = []
+        for doc in docs:
+            try:
+                sales = float(doc.split("Total sales: ")[1].split(" ")[0])
+            except (IndexError, ValueError):
+                sales = 0
+            scored.append((sales, doc))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        context_lines.append(f"### {month_key}")
+        context_lines.extend(f"- {doc}" for _, doc in scored[:20])
+    context_text = "\n".join(context_lines)
 
-    products = base_products[["Category", "name", "price_numeric",
-                               "estimated_monthly_sales", "profit_margin_percentage"]].copy()
-    if len(products) > 100:
-        products = (products
-                    .sort_values(["Category", "estimated_monthly_sales"], ascending=[True, False])
-                    .groupby("Category").head(5))
-
-    products_text = "\n".join(
-        f"  {r['Category']} | {r['name']} | €{r['price_numeric']:.2f} | "
-        f"Sales: {int(r['estimated_monthly_sales'])} | Margin: {r['profit_margin_percentage']:.1f}%"
-        for _, r in products.head(150).iterrows()
-    )
+    categories = sorted(base_products["Category"].unique())
+    products_text = "\n".join(f"  {cat}" for cat in categories)
 
     return f"""You are a retail analyst predicting sales for a Spanish supermarket.
 
@@ -140,10 +141,19 @@ def llm_forecast(target_year: int, target_month: int,
         return {}
 
     try:
-        json_match = re.search(r"\{.*\}", content, re.DOTALL)
-        multipliers = json.loads(json_match.group(0) if json_match else content)
+        # Strip markdown fences
+        cleaned = re.sub(r"```\w*\n?", "", content).strip()
+        json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+        raw = json_match.group(0) if json_match else cleaned
+        # Fix common LLM JSON issues
+        raw = raw.replace("'", '"')
+        raw = re.sub(r",{2,}", ",", raw)       # double/triple commas → single
+        raw = re.sub(r",\s*}", "}", raw)        # trailing comma before }
+        raw = re.sub(r",\s*]", "]", raw)        # trailing comma before ]
+        multipliers = json.loads(raw)
     except Exception as exc:
         print(f"     Could not parse JSON from LLM response: {exc}")
+        print(f"     Raw response (first 500 chars): {content[:500]}")
         return {}
 
     clean = {}
@@ -211,6 +221,15 @@ def optimize_ensemble(df: pd.DataFrame, mlp_path: Path, transformer_path: Path,
     mlp.load_state_dict(torch.load(mlp_path, weights_only=True))
     mlp.eval()
 
+    # Load feature normalizer (saved by 02_train_models.py)
+    normalizer = None
+    normalizer_path = mlp_path.parent / "normalizer.pth"
+    if normalizer_path.exists():
+        data = torch.load(normalizer_path, weights_only=True)
+        normalizer = FeatureNormalizer()
+        normalizer.mean = data["mean"]
+        normalizer.std = data["std"]
+
     transformer = build_transformer(input_dim=input_dim)
     if not transformer_path.exists():
         print(f"   ERROR: No Transformer model at {transformer_path}. Run 02_train_models.py first.")
@@ -229,7 +248,8 @@ def optimize_ensemble(df: pd.DataFrame, mlp_path: Path, transformer_path: Path,
 
         noise_levels = [0.0] + [5.0 * (j + 1) for j in range(n_candidates - 1)]
         candidates = [
-            optimize_rack_mlp(rack_df, mlp, NUM_SHELVES, SHELF_WIDTH_CM, noise_scale=noise)
+            optimize_rack_mlp(rack_df, mlp, NUM_SHELVES, SHELF_WIDTH_CM,
+                              noise_scale=noise, normalizer=normalizer)
             for noise in noise_levels
         ]
 
