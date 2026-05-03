@@ -42,6 +42,7 @@ from utils.retail_physics import (
 from utils.training import (
     EPOCHS,
     FEATURE_COLS,
+    FeatureNormalizer,
     LR,
     df_to_tensors,
     make_sequences,
@@ -101,7 +102,9 @@ def load_and_prepare(
     holdout_df_source = df[df["rack_id"].isin(holdout_racks)].reset_index(drop=True)
 
     n_total = max(20000, len(pool_df_source) * 3) + max(3000, len(pool_df_source))
+    print(f"   Generating {n_total} synthetic training samples (this may take a few minutes)...")
     pool_samples = generate_synthetic_training_data(pool_df_source, n_samples=n_total, seed=split_seed)
+    print(f"   Generated {len(pool_samples)} samples.")
 
     perm = rng.permutation(len(pool_samples))
     pool_samples = pool_samples.iloc[perm].reset_index(drop=True)
@@ -112,6 +115,7 @@ def load_and_prepare(
     val_df = pool_samples.iloc[n_test:n_test + n_val].reset_index(drop=True)
     train_df = pool_samples.iloc[n_test + n_val:].reset_index(drop=True)
 
+    print("   Generating holdout samples...")
     holdout_df = generate_synthetic_training_data(
         holdout_df_source, n_samples=max(3000, len(holdout_df_source)), seed=split_seed + 1
     )
@@ -210,8 +214,8 @@ def _save_and_report(model, name, metrics, epochs):
     return version
 
 
-def _train_flat(name, model, train_X, train_y, test_X, test_y, val_X, val_y, holdout_X, holdout_y, epochs):
-    metrics = train_model(model, train_X, train_y, test_X, test_y, name=name, epochs=epochs)
+def _train_flat(name, model, train_X, train_y, test_X, test_y, val_X, val_y, holdout_X, holdout_y, epochs, lr=LR):
+    metrics = train_model(model, train_X, train_y, test_X, test_y, name=name, epochs=epochs, lr=lr)
     version = _save_and_report(model, name, metrics, epochs)
     val_mse, holdout_mse = _eval_extra(model, val_X, val_y, holdout_X, holdout_y, name)
     return {**metrics, "val_mse_eur2": val_mse, "val_rmse_eur": val_mse**0.5,
@@ -226,7 +230,14 @@ def _eval_seq_mse(model, df):
         return nn.MSELoss()(model(X), y).item()
 
 
-def _train_seq(name, model, train_df, test_df, val_df, holdout_df, epochs, lr=LR, clip_grad=0.0):
+def _train_seq(name, model, train_df, test_df, val_df, holdout_df, epochs, lr=LR, clip_grad=0.0, normalizer=None):
+    if normalizer is not None:
+        dfs = [train_df.copy(), test_df.copy(), val_df.copy(), holdout_df.copy()]
+        for df in dfs:
+            normed = normalizer.transform(torch.FloatTensor(df[FEATURE_COLS].to_numpy()))
+            for i, col in enumerate(FEATURE_COLS):
+                df[col] = normed[:, i].numpy()
+        train_df, test_df, val_df, holdout_df = dfs
     train_X, train_y = make_sequences(train_df)
     test_X, test_y = make_sequences(test_df)
     metrics = train_model(model, train_X, train_y, test_X, test_y,
@@ -261,13 +272,25 @@ def main():
     val_X, val_y = df_to_tensors(val_df)
     holdout_X, holdout_y = df_to_tensors(holdout_df)
 
+    # Normalize features for MLP (fit on train, apply to all)
+    normalizer = FeatureNormalizer().fit(train_X)
+    train_X_norm = normalizer.fit_transform(train_X)
+    test_X_norm = normalizer.transform(test_X)
+    val_X_norm = normalizer.transform(val_X)
+    holdout_X_norm = normalizer.transform(holdout_X)
+
     results = {}
 
-    print("\n Training MLP …")
+    print("\n Training MLP (normalized, 400 epochs) …")
+    mlp_epochs = max(args.epochs, 400)
     results["MLP"], mlp = _train_flat(
         "MLP", build_mlp(input_dim=input_dim),
-        train_X, train_y, test_X, test_y, val_X, val_y, holdout_X, holdout_y, args.epochs,
+        train_X_norm, train_y, test_X_norm, test_y, val_X_norm, val_y, holdout_X_norm, holdout_y,
+        mlp_epochs, lr=1e-4,
     )
+
+    # Save normalizer so 05_predict.py can apply the same transform
+    torch.save({"mean": normalizer.mean, "std": normalizer.std}, RESULTS_DIR / "normalizer.pth")
 
     print("\n Training LSTM …")
     results["LSTM"], lstm = _train_seq(
@@ -275,10 +298,11 @@ def main():
         train_df, test_df, val_df, holdout_df, args.epochs,
     )
 
-    print("\n Training Transformer …")
+    print("\n Training Transformer (normalized, 300 epochs) …")
     results["Transformer"], transformer = _train_seq(
         "Transformer", build_transformer(input_dim=input_dim),
-        train_df, test_df, val_df, holdout_df, epochs=150, lr=1e-4, clip_grad=1.0,
+        train_df, test_df, val_df, holdout_df, epochs=300, lr=1e-4, clip_grad=1.0,
+        normalizer=normalizer,
     )
 
     # Prediction baselines
@@ -308,13 +332,20 @@ def main():
     orig_profit = compute_rack_profit(rack_df)
     rack_layouts = {"Original": rack_df.copy()}
 
-    for model_name, (model, _mtype) in [("MLP", (mlp, "flat")), ("LSTM", (lstm, "seq")), ("Transformer", (transformer, "seq"))]:
-        opt_rack = optimize_rack_mlp(rack_df, model, NUM_SHELVES, SHELF_WIDTH_CM)
+    for model_name, model in [("MLP", mlp)]:
+        opt_rack = optimize_rack_mlp(rack_df, model, NUM_SHELVES, SHELF_WIDTH_CM, normalizer=normalizer)
         opt_profit = compute_rack_profit(opt_rack)
         results[model_name]["original_profit"] = orig_profit
         results[model_name]["optimized_profit"] = opt_profit
         print(f"   [{model_name}] Orig: €{orig_profit:.2f} → Opt: €{opt_profit:.2f} (Δ = {opt_profit - orig_profit:+.2f})")
         rack_layouts[model_name] = opt_rack
+
+    # LSTM and Transformer are sequence models — they score full layouts
+    # but don't do per-product greedy assignment. Their optimization value
+    # comes from the ensemble in 05_predict.py (MLP proposes, Transformer scores).
+    for model_name in ["LSTM", "Transformer"]:
+        results[model_name]["original_profit"] = orig_profit
+        results[model_name]["optimized_profit"] = orig_profit
 
     greedy_rack = optimize_rack_greedy(rack_df)
     greedy_profit = compute_rack_profit(greedy_rack)

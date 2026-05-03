@@ -10,14 +10,14 @@ from torch import nn
 
 
 class ProfitLiftMLP(nn.Module):
-    """Three-hidden-layer MLP for profit-lift regression."""
+    """Four-hidden-layer MLP with BatchNorm for profit-lift regression."""
 
-    def __init__(self, input_dim: int = 10, hidden_dims=(256, 128, 64), dropout: float = 0.15):
+    def __init__(self, input_dim: int = 10, hidden_dims=(512, 256, 128, 64), dropout: float = 0.15):
         super().__init__()
         layers = []
         prev = input_dim
         for h in hidden_dims:
-            layers += [nn.Linear(prev, h), nn.ReLU(), nn.Dropout(dropout)]
+            layers += [nn.Linear(prev, h), nn.BatchNorm1d(h), nn.ReLU(), nn.Dropout(dropout)]
             prev = h
         layers.append(nn.Linear(prev, 1))
         self.net = nn.Sequential(*layers)

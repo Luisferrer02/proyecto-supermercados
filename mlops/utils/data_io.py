@@ -73,6 +73,7 @@ def load_monthly_csvs(
     dfs = []
     for f in csv_files:
         df = pd.read_csv(f)
+        print(f"   {f.name} ({len(df)} products)")
         if add_month_cols:
             meta = parse_month_from_filename(f.name)
             if meta:

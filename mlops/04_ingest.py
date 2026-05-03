@@ -211,6 +211,8 @@ def main():
     parser.add_argument("--epochs", type=int, default=EPOCHS, help=f"Training epochs (default: {EPOCHS})")
     parser.add_argument("--sequential", action="store_true",
                         help="Run embedding and training sequentially (for debugging)")
+    parser.add_argument("--embeddings-only", action="store_true",
+                        help="Only generate embeddings, skip model training (use if already trained with 02_train_models.py)")
     args = parser.parse_args()
 
     input_dir = Path(args.input_dir)
@@ -247,16 +249,25 @@ def main():
         print("  Phase 1: Embedding generation")
         run_embedding_thread(input_dir, tracker)
         tracker.print_status()
-        print("\n  Phase 2: MLP + Transformer training")
-        run_training_thread(input_dir, tracker, epochs=args.epochs)
-        tracker.print_status()
+        if not args.embeddings_only:
+            print("\n  Phase 2: MLP + Transformer training")
+            run_training_thread(input_dir, tracker, epochs=args.epochs)
+            tracker.print_status()
+        else:
+            tracker.update_training("done", "Skipped (--embeddings-only)")
         print()
     else:
-        print("  Running embedding + training in parallel...\n")
-        t1 = threading.Thread(target=run_embedding_thread, args=(input_dir, tracker), daemon=True)
-        t2 = threading.Thread(target=run_training_thread, args=(input_dir, tracker, args.epochs), daemon=True)
-        t1.start()
-        t2.start()
+        if args.embeddings_only:
+            print("  Running embeddings only (skipping training)...\n")
+            tracker.update_training("done", "Skipped (--embeddings-only)")
+            t1 = threading.Thread(target=run_embedding_thread, args=(input_dir, tracker), daemon=True)
+            t1.start()
+        else:
+            print("  Running embedding + training in parallel...\n")
+            t1 = threading.Thread(target=run_embedding_thread, args=(input_dir, tracker), daemon=True)
+            t2 = threading.Thread(target=run_training_thread, args=(input_dir, tracker, args.epochs), daemon=True)
+            t1.start()
+            t2.start()
         while not tracker.all_done:
             tracker.print_status()
             time.sleep(1)
