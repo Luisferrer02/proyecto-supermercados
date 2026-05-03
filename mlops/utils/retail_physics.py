@@ -56,67 +56,56 @@ def compute_product_profit(price: float,
 
 def compute_rack_profit_advanced(df_rack: pd.DataFrame) -> float:
     """
-    Advanced profit calculation with complex dynamics.
+    Advanced profit calculation with complex dynamics (vectorized).
     Includes: shelf multiplier + crowding penalty + spread bonus +
     diminishing returns on eye-level shelves.
     """
-    total_profit = 0.0
     n = len(df_rack)
     if n == 0:
         return 0.0
 
-    # Count products per shelf
-    shelf_counts = df_rack.groupby("shelf_level").size().to_dict()
-    shelf_widths = df_rack.groupby("shelf_level")["product_width_cm"].sum().to_dict()
+    shelf = df_rack["shelf_level"].astype(int)
+    price = df_rack["price_numeric"]
+    margin = df_rack["profit_margin_percentage"] / 100.0
+    sales = df_rack["estimated_monthly_sales"]
 
-    # How many unique shelves are used
+    # Shelf multiplier (vectorized lookup)
+    base_mult = shelf.map(SHELF_MULTIPLIERS).fillna(1.0)
+
+    # Shelf-level aggregates
+    shelf_counts = shelf.value_counts()
+    shelf_widths = df_rack.groupby("shelf_level")["product_width_cm"].sum()
     n_shelves_used = len(shelf_counts)
-    # Spread bonus: using more shelves = better visibility (up to +15%)
+
+    # Spread bonus
     spread_bonus = 1.0 + 0.15 * (n_shelves_used / NUM_SHELVES)
 
-    for _, row in df_rack.iterrows():
-        shelf = int(row["shelf_level"])
-        base_mult = get_shelf_multiplier(shelf)
+    # Crowding penalty per product (based on its shelf)
+    count_on_shelf = shelf.map(shelf_counts)
+    crowding_factor = np.where(
+        count_on_shelf > 5,
+        np.maximum(0.5, 1.0 - 0.05 * (count_on_shelf - 5)),
+        1.0,
+    )
 
-        # 1. Crowding penalty: more products on a shelf = less attention each
-        #    Penalty kicks in after 5 products on a shelf
-        count_on_shelf = shelf_counts.get(shelf, 1)
-        crowding_factor = 1.0
-        if count_on_shelf > 5:
-            crowding_factor = max(0.5, 1.0 - 0.05 * (count_on_shelf - 5))
+    # Diminishing returns on eye-level shelves (3, 4, 5)
+    fill_ratio = shelf.map(shelf_widths).fillna(0) / SHELF_WIDTH_CM
+    is_eye = shelf.isin([3, 4, 5])
+    dim_factor = np.where(
+        is_eye & (fill_ratio > 0.6),
+        np.maximum(0.7, 1.0 - 0.5 * (fill_ratio - 0.6)),
+        1.0,
+    )
 
-        # 2. Diminishing returns on eye-level shelves
-        #    As eye-level shelves fill up (by width), the multiplier decreases
-        dim_factor = 1.0
-        if shelf in [3, 4, 5]:
-            fill_ratio = shelf_widths.get(shelf, 0) / SHELF_WIDTH_CM
-            # Starts penalizing after 60% full
-            if fill_ratio > 0.6:
-                dim_factor = max(0.7, 1.0 - 0.5 * (fill_ratio - 0.6))
+    # Price-tier positioning bonus
+    tier_bonus = np.ones(n)
+    tier_bonus[(price > 5.0) & is_eye] = 1.1
+    tier_bonus[(price < 2.0) & shelf.isin([1, 2])] = 1.15
+    tier_bonus[(price > 5.0) & shelf.isin([1, 2])] = 0.85
 
-        # 3. Price-tier positioning bonus
-        #    Expensive products (>5€) get a bonus on eye-level (shoppers see premium first)
-        #    Cheap products (<2€) get a bonus on bottom shelves (bulk buys)
-        tier_bonus = 1.0
-        price = row["price_numeric"]
-        if price > 5.0 and shelf in [3, 4, 5]:
-            tier_bonus = 1.1  # +10% for premium at eye level
-        elif price < 2.0 and shelf in [1, 2]:
-            tier_bonus = 1.15  # +15% for budget items at bottom (bulk)
-        elif price > 5.0 and shelf in [1, 2]:
-            tier_bonus = 0.85  # penalty: premium hidden at bottom
-
-        effective_mult = base_mult * crowding_factor * dim_factor * tier_bonus * spread_bonus
-
-        profit = (
-            price
-            * (row["profit_margin_percentage"] / 100.0)
-            * row["estimated_monthly_sales"]
-            * effective_mult
-        )
-        total_profit += profit
-
-    return total_profit
+    effective_mult = base_mult * crowding_factor * dim_factor * tier_bonus * spread_bonus
+    profit = price * margin * sales * effective_mult
+    return float(profit.sum())
 
 
 def compute_rack_profit(df_rack: pd.DataFrame) -> float:
