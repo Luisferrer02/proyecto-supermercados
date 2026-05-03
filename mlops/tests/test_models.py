@@ -19,6 +19,7 @@ class TestMLP:
 
     def test_single_sample(self):
         model = build_mlp(input_dim=INPUT_DIM)
+        model.eval()  # BatchNorm requires eval mode for batch_size=1
         x = torch.randn(1, INPUT_DIM)
         out = model(x)
         assert out.shape == (1,)

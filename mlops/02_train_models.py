@@ -115,7 +115,7 @@ def load_and_prepare(
     val_df = pool_samples.iloc[n_test:n_test + n_val].reset_index(drop=True)
     train_df = pool_samples.iloc[n_test + n_val:].reset_index(drop=True)
 
-    print(f"   Generating holdout samples...")
+    print("   Generating holdout samples...")
     holdout_df = generate_synthetic_training_data(
         holdout_df_source, n_samples=max(3000, len(holdout_df_source)), seed=split_seed + 1
     )
@@ -214,8 +214,8 @@ def _save_and_report(model, name, metrics, epochs):
     return version
 
 
-def _train_flat(name, model, train_X, train_y, test_X, test_y, val_X, val_y, holdout_X, holdout_y, epochs):
-    metrics = train_model(model, train_X, train_y, test_X, test_y, name=name, epochs=epochs)
+def _train_flat(name, model, train_X, train_y, test_X, test_y, val_X, val_y, holdout_X, holdout_y, epochs, lr=LR):
+    metrics = train_model(model, train_X, train_y, test_X, test_y, name=name, epochs=epochs, lr=lr)
     version = _save_and_report(model, name, metrics, epochs)
     val_mse, holdout_mse = _eval_extra(model, val_X, val_y, holdout_X, holdout_y, name)
     return {**metrics, "val_mse_eur2": val_mse, "val_rmse_eur": val_mse**0.5,
@@ -281,11 +281,12 @@ def main():
 
     results = {}
 
-    print("\n Training MLP (normalized, 200 epochs) …")
-    mlp_epochs = max(args.epochs, 200)
+    print("\n Training MLP (normalized, 400 epochs) …")
+    mlp_epochs = max(args.epochs, 400)
     results["MLP"], mlp = _train_flat(
         "MLP", build_mlp(input_dim=input_dim),
-        train_X_norm, train_y, test_X_norm, test_y, val_X_norm, val_y, holdout_X_norm, holdout_y, mlp_epochs,
+        train_X_norm, train_y, test_X_norm, test_y, val_X_norm, val_y, holdout_X_norm, holdout_y,
+        mlp_epochs, lr=1e-4,
     )
 
     # Save normalizer so 05_predict.py can apply the same transform

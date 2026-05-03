@@ -77,7 +77,9 @@ def _get_hf_pipeline(model_id: str):
             _hf_pipeline = pipeline(
                 "text-generation",
                 model=model_id,
-                tokenizer=AutoTokenizer.from_pretrained(model_id, clean_up_tokenization_spaces=False),
+                tokenizer=AutoTokenizer.from_pretrained(  # nosec B615
+                    model_id, clean_up_tokenization_spaces=False
+                ),
                 dtype=torch.bfloat16,
                 device_map="auto",
             )
