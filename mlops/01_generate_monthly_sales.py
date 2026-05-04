@@ -3,7 +3,7 @@
 01_generate_monthly_sales.py — Monthly Sales Dataset Generator
 ================================================================
 Reads `products_macro.csv` (Category, name, subtitle, price, discount_price)
-and creates 6 monthly sales CSVs (July-December 2024), each simulating a
+and creates 6 monthly sales CSVs (July-December 2023), each simulating a
 different month's shelf activity.
 
 Output columns per CSV:
@@ -57,18 +57,18 @@ BATCH_SIZE = 50
 
 # Months to generate
 MONTHS = [
-    (2024, 1, "january"),
-    (2024, 2, "february"),
-    (2024, 3, "march"),
-    (2024, 4, "april"),
-    (2024, 5, "may"),
-    (2024, 6, "june"),
-    (2024, 7, "july"),
-    (2024, 8, "august"),
-    (2024, 9, "september"),
-    (2024, 10, "october"),
-    (2024, 11, "november"),
-    (2024, 12, "december"),
+    (2023, 1, "january"),
+    (2023, 2, "february"),
+    (2023, 3, "march"),
+    (2023, 4, "april"),
+    (2023, 5, "may"),
+    (2023, 6, "june"),
+    (2023, 7, "july"),
+    (2023, 8, "august"),
+    (2023, 9, "september"),
+    (2023, 10, "october"),
+    (2023, 11, "november"),
+    (2023, 12, "december"),
 ]
 
 MONTH_NAMES_ES = {
@@ -220,7 +220,7 @@ def main():
 
 def _parse_args():
     parser = argparse.ArgumentParser(
-        description="Generate 12 monthly sales datasets (Jan-Dec 2024)")
+        description="Generate 12 monthly sales datasets (Jan-Dec 2023)")
     parser.add_argument("--input", type=str, default=str(DEFAULT_INPUT),
                         help="Path to products_macro.csv")
     parser.add_argument("--output-dir", type=str, default=str(DEFAULT_OUTPUT_DIR),

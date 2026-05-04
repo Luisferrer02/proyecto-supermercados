@@ -1,4 +1,4 @@
-const MockES = globalThis.EventSource;
+const MockES = globalThis.EventSource as unknown as MockEventSourceConstructor;
 
 export function getLatestEventSource() {
   const instances = MockES._instances;

@@ -1,4 +1,4 @@
-import { parseLine, INITIAL, type FriendlyProgress } from './progressParser';
+import { parseLine, INITIAL } from './progressParser';
 
 describe('parseLine', () => {
   const ingestState = { stage: 'ingest' as const };

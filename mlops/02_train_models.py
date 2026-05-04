@@ -286,7 +286,7 @@ def main():
     results["MLP"], mlp = _train_flat(
         "MLP", build_mlp(input_dim=input_dim),
         train_X_norm, train_y, test_X_norm, test_y, val_X_norm, val_y, holdout_X_norm, holdout_y,
-        mlp_epochs, lr=1e-4,
+        mlp_epochs,
     )
 
     # Save normalizer so 05_predict.py can apply the same transform

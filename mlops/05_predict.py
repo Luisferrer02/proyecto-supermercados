@@ -108,27 +108,26 @@ def _build_forecast_prompt(target_year: int, target_month: int,
 ## Historical Context (from knowledge base)
 {context_text}
 
-## Current Product Base (representative sample)
+## Categories to forecast
 {products_text}
 
 ## Task
-Based on the historical data above, forecast how sales will change for \
-{month_name} {target_year} compared to the most recent month's data.
+Predict a sales multiplier for EACH category above for {month_name} {target_year}.
 
-Consider:
-1. **Seasonal trends**: What categories sell more/less in {month_name}?
-2. **Recent momentum**: Are any categories trending up or down in recent months?
-3. **Year-over-year**: If we have data from {month_name} last year, what patterns repeat?
+Key seasonal patterns for a Spanish supermarket:
+- **January**: Post-holiday dip. Less marisco/turron/vino (Christmas is over). More soups, legumes, diet products. Fruit and vegetables drop (winter).
+- **Summer (Jun-Aug)**: More agua, refrescos, helados, cerveza, fruta, verdura. Less chocolate, soups, hot drinks.
+- **November-December**: Christmas surge — marisco, turron, chocolate, vino, jamon, embutido all spike. General spending up 10-15%.
+- **September**: Back to school — cereals, leche, galletas up. Summer products drop.
 
-Respond ONLY with a JSON object mapping category names to a sales multiplier (float).
-A value of 1.0 means no change, 1.3 means +30% sales, 0.7 means -30% sales.
+Rules:
+- Most categories should be between 0.85 and 1.15 (subtle changes)
+- Only strongly seasonal categories should go beyond that range (0.7-1.5)
+- Use the historical data above to identify actual trends, not just generic patterns
 
-Example format:
-{{"Fruta": 1.2, "Verdura": 1.1, "Marisco": 0.8, "Chocolate": 1.5}}
-
-Include ALL categories present in the data. Be realistic — most multipliers should be \
-between 0.7 and 1.5.
-Respond with ONLY the JSON object, no explanation."""
+Respond with ONLY a JSON object. Keys = exact category names from the list above. Values = float multiplier.
+Example: {{"Fruta": 0.85, "Chocolate": 1.3, "Agua": 0.8}}
+No markdown fences, no explanation."""
 
 
 def llm_forecast(target_year: int, target_month: int,

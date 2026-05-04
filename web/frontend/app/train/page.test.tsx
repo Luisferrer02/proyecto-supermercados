@@ -66,7 +66,7 @@ describe('TrainPage', () => {
 
     await waitFor(() => {
       const resultsCalls = mockFetch.mock.calls.filter(
-        ([url]: [string]) => typeof url === 'string' && url.includes('/api/train/results')
+        ([url]: [string | URL | Request, (RequestInit | undefined)?]) => typeof url === 'string' && url.includes('/api/train/results')
       );
       expect(resultsCalls.length).toBeGreaterThanOrEqual(2);
     });

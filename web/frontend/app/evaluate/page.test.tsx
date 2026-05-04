@@ -74,7 +74,7 @@ describe('EvaluatePage', () => {
 
     await waitFor(() => {
       const statusCalls = mockFetch.mock.calls.filter(
-        ([url]: [string]) => typeof url === 'string' && url.includes('/api/evaluate/status')
+        ([url]: [string | URL | Request, (RequestInit | undefined)?]) => typeof url === 'string' && url.includes('/api/evaluate/status')
       );
       expect(statusCalls.length).toBeGreaterThanOrEqual(2);
     });

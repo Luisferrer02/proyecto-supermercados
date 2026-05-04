@@ -4,7 +4,9 @@ import { Sidebar } from './Sidebar';
 import { usePathname } from 'next/navigation';
 
 jest.mock('next/link', () => {
-  return ({ children, href, ...rest }: { children: React.ReactNode; href: string; [key: string]: unknown }) => <a href={href} {...rest}>{children}</a>;
+  const MockLink = ({ children, href, ...rest }: { children: React.ReactNode; href: string; [key: string]: unknown }) => <a href={href} {...rest}>{children}</a>;
+  MockLink.displayName = 'MockLink';
+  return MockLink;
 });
 
 jest.mock('next/navigation', () => ({

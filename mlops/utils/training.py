@@ -39,7 +39,7 @@ class FeatureNormalizer:
 
     def fit(self, X: torch.Tensor) -> "FeatureNormalizer":
         self.mean = X.mean(dim=0)
-        self.std = X.std(dim=0).clamp(min=1e-8)
+        self.std = X.std(dim=0).clamp(min=1e-2)
         return self
 
     def transform(self, X: torch.Tensor) -> torch.Tensor:
