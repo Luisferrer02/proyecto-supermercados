@@ -72,7 +72,7 @@ class TestSaveModel:
         manifest_file.write_text("{ invalid json }")
         
         model = _make_model()
-        record = save_model(model, "mlp", tmp_path)
+        save_model(model, "mlp", tmp_path)
         
         # Should have recovered and created new manifest
         new_manifest = json.loads(manifest_file.read_text())
@@ -87,7 +87,7 @@ class TestSaveModel:
         manifest_file.write_text('{"not": "a list"}')
         
         model = _make_model()
-        record = save_model(model, "mlp", tmp_path)
+        save_model(model, "mlp", tmp_path)
         
         # Should have recovered and created list manifest
         new_manifest = json.loads(manifest_file.read_text())

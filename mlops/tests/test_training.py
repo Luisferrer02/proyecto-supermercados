@@ -124,7 +124,7 @@ class TestOptimizeRackMlp:
     def test_noise_produces_different_layouts(self):
         rack = self._make_rack()
         mlp = self._make_mlp()
-        r1 = optimize_rack_mlp(rack, mlp, num_shelves=7, shelf_width_cm=300, noise_scale=0)
+        optimize_rack_mlp(rack, mlp, num_shelves=7, shelf_width_cm=300, noise_scale=0)
         r2 = optimize_rack_mlp(rack, mlp, num_shelves=7, shelf_width_cm=300, noise_scale=5.0)
         # With high noise, layouts are very likely different
         # (not guaranteed, so just check it doesn't crash)
