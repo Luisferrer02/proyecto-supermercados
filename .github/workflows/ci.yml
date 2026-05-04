@@ -237,11 +237,17 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
 
+      - name: Prepare mlops directories
+        run: mkdir -p mlops/data/monthly mlops/results
+
       - name: Run E2E tests
         working-directory: web/e2e
         env:
           MOCK_PYTHON: "1"
           CI: "true"
+          MLOPS_DIR: ${{ github.workspace }}/mlops
+          RESULTS_DIR: ${{ github.workspace }}/mlops/results
+          PORT: "3001"
         run: npx playwright test
 
       - name: Upload Playwright report
