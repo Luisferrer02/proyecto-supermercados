@@ -2,7 +2,7 @@ import { render, screen, act } from '@testing-library/react';
 import { LiveLog } from './LiveLog';
 
 // Access the mock EventSource from jest.setup.ts
-const MockES = (global as any).EventSource;
+const MockES = globalThis.EventSource;
 
 beforeEach(() => MockES._clear());
 

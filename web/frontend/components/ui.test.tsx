@@ -1,3 +1,4 @@
+import type React from 'react';
 import { render, screen } from '@testing-library/react';
 
 import { Badge } from './ui/badge';
@@ -14,7 +15,7 @@ import {
 
 jest.mock('radix-ui', () => ({
   Slot: {
-    Root: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+    Root: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => <span {...props}>{children}</span>,
   },
 }));
 

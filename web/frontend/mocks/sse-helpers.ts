@@ -1,4 +1,4 @@
-const MockES = (global as any).EventSource;
+const MockES = globalThis.EventSource;
 
 export function getLatestEventSource() {
   const instances = MockES._instances;
@@ -9,7 +9,7 @@ export function clearEventSources() {
   MockES._clear();
 }
 
-export function simulateOptimizeStream(es: any) {
+export function simulateOptimizeStream(es: MockEventSourceInstance) {
   es.__emit('step', JSON.stringify({ name: 'ingest', index: 1, total: 2 }));
   es.__emit('log', JSON.stringify({ step: 'ingest', message: 'Loading CSVs...' }));
   es.__emit('step', JSON.stringify({ name: 'predict', index: 2, total: 2 }));
@@ -17,7 +17,7 @@ export function simulateOptimizeStream(es: any) {
   es.__emit('done', JSON.stringify({ ok: true }));
 }
 
-export function simulateSingleStream(es: any, success = true) {
+export function simulateSingleStream(es: MockEventSourceInstance, success = true) {
   es.__emit('log', JSON.stringify({ message: 'Processing...' }));
   if (success) {
     es.__emit('done', JSON.stringify({ message: 'Process completed successfully.' }));
@@ -26,7 +26,7 @@ export function simulateSingleStream(es: any, success = true) {
   }
 }
 
-export function simulateTrainStream(es: any) {
+export function simulateTrainStream(es: MockEventSourceInstance) {
   es.__emit('log', JSON.stringify({ message: '[MLP] Epoch 1/80  Train MSE: 45.2000' }));
   es.__emit('log', JSON.stringify({ message: '[MLP] Epoch 80/80  Train MSE: 12.5000' }));
   es.__emit('done', JSON.stringify({ message: 'Process completed successfully.' }));

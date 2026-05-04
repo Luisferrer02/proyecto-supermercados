@@ -6,9 +6,9 @@ import { getLatestEventSource, clearEventSources, simulateSingleStream } from '@
 
 jest.mock('@/components/LiveLog', () => ({
   LiveLog: ({ url, onDone }: { url: string; onDone?: (s: boolean) => void }) => {
-    const MockES = (global as any).EventSource;
+    const MockES = globalThis.EventSource;
     const es = new MockES(url);
-    es.addEventListener('done', (e: any) => {
+    es.addEventListener('done', (e: MessageEvent) => {
       const d = JSON.parse(e.data);
       const success = d.message?.includes('successfully') || d.message?.includes('code 0');
       onDone?.(success);

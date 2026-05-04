@@ -1,9 +1,10 @@
+import type React from 'react';
 import { render, screen } from '@testing-library/react';
 import { Sidebar } from './Sidebar';
 import { usePathname } from 'next/navigation';
 
 jest.mock('next/link', () => {
-  return ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>;
+  return ({ children, href, ...rest }: { children: React.ReactNode; href: string; [key: string]: unknown }) => <a href={href} {...rest}>{children}</a>;
 });
 
 jest.mock('next/navigation', () => ({

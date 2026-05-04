@@ -33,7 +33,7 @@ describe('UploadPage', () => {
     global.fetch = jest.fn(() => Promise.resolve({
       ok: true, status: 200,
       json: () => Promise.resolve({ files: [] }),
-    } as Response)) as any;
+    } as Response)) as typeof fetch;
 
     render(<UploadPage />);
     await waitFor(() => {

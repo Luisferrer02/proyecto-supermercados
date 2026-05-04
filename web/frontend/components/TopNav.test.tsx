@@ -1,3 +1,4 @@
+import type React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TopNav } from './TopNav';
 
@@ -8,7 +9,7 @@ jest.mock('next/navigation', () => ({
 
 // Mock next/link — render a plain <a> tag
 jest.mock('next/link', () => {
-  return ({ children, href, ...rest }: any) => (
+  return ({ children, href, ...rest }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
     <a href={href} {...rest}>{children}</a>
   );
 });

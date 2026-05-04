@@ -6,9 +6,9 @@ import { getLatestEventSource, clearEventSources, simulateSingleStream } from '@
 
 jest.mock('@/components/LiveLog', () => ({
   LiveLog: ({ url, onDone }: { url: string; onDone?: (s: boolean) => void }) => {
-    const MockES = (global as any).EventSource;
+    const MockES = globalThis.EventSource;
     const es = new MockES(url);
-    es.addEventListener('done', (e: any) => {
+    es.addEventListener('done', (e: MessageEvent) => {
       const d = JSON.parse(e.data);
       const success = d.message?.includes('successfully') || d.message?.includes('code 0');
       onDone?.(success);
@@ -18,13 +18,13 @@ jest.mock('@/components/LiveLog', () => ({
 }));
 
 jest.mock('@/components/ShelfMap', () => ({
-  ShelfMap: ({ products, rackId }: any) => (
+  ShelfMap: ({ products, rackId }: { products: unknown[]; rackId: string }) => (
     <div data-testid="shelf-map">ShelfMap: rack={rackId} products={products.length}</div>
   ),
 }));
 
 jest.mock('@/components/ShelfSankey', () => ({
-  ShelfSankey: ({ movements }: any) => (
+  ShelfSankey: ({ movements }: { movements: unknown[] }) => (
     <div data-testid="shelf-sankey">ShelfSankey: {movements.length} movements</div>
   ),
 }));
@@ -103,7 +103,7 @@ describe('PredictPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /Lanzar predicción/ }));
 
     // Override fetch to return error for predict results
-    global.fetch = jest.fn((url: any, init?: any) => {
+    global.fetch = jest.fn((url: string | URL | Request) => {
       const urlStr = typeof url === 'string' ? url : url.toString();
       if (urlStr.includes('/api/predict/results')) {
         return Promise.resolve({
@@ -117,8 +117,8 @@ describe('PredictPage', () => {
           json: () => Promise.resolve({ movements: [] }),
         } as Response);
       }
-      return (originalFetch as any)(url, init);
-    }) as any;
+      return (originalFetch as typeof fetch)(url);
+    }) as typeof fetch;
 
     const es = getLatestEventSource();
     act(() => simulateSingleStream(es, true));

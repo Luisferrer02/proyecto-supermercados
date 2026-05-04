@@ -5,7 +5,7 @@ import { setupFetchMock } from '@/mocks/handlers';
 import { getLatestEventSource, clearEventSources, simulateOptimizeStream } from '@/mocks/sse-helpers';
 
 jest.mock('@/components/ShelfSankey', () => ({
-  ShelfSankey: ({ movements }: any) => (
+  ShelfSankey: ({ movements }: { movements: unknown[] }) => (
     <div data-testid="shelf-sankey">ShelfSankey: {movements.length} movements</div>
   ),
 }));
@@ -41,7 +41,7 @@ describe('HomePage', () => {
   });
 
   it('shows error when no files uploaded', async () => {
-    global.fetch = jest.fn((url: any) => {
+    global.fetch = jest.fn((url: string | URL | Request) => {
       const urlStr = typeof url === 'string' ? url : url.toString();
       if (urlStr.includes('/api/upload/files')) {
         return Promise.resolve({
@@ -56,7 +56,7 @@ describe('HomePage', () => {
         } as Response);
       }
       return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) } as Response);
-    }) as any;
+    }) as typeof fetch;
 
     render(<HomePage />);
     await waitFor(() => screen.getByRole('button', { name: /Optimizar/ }));

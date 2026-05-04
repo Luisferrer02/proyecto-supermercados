@@ -4,7 +4,7 @@
  * with a route-matching function that returns canned JSON responses.
  */
 
-type Handler = { method: string; pattern: RegExp; response: () => any; status?: number };
+type Handler = { method: string; pattern: RegExp; response: () => unknown; status?: number };
 
 const HANDLERS: Handler[] = [
   // Upload
@@ -76,7 +76,7 @@ const HANDLERS: Handler[] = [
 
 export function createFetchMock() {
   return jest.fn((url: string | URL | Request, init?: RequestInit) => {
-    const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : (url as any).url;
+    const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : (url as Request).url;
     const method = (init?.method || 'GET').toUpperCase();
 
     const handler = HANDLERS.find(h => h.method === method && h.pattern.test(urlStr));
@@ -100,6 +100,6 @@ export function createFetchMock() {
 
 export function setupFetchMock() {
   const mockFetch = createFetchMock();
-  global.fetch = mockFetch as any;
+  global.fetch = mockFetch as typeof fetch;
   return mockFetch;
 }

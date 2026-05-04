@@ -1,3 +1,4 @@
+import type React from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TrainPage from './page';
@@ -6,20 +7,20 @@ import { getLatestEventSource, clearEventSources, simulateTrainStream } from '@/
 
 // Mock recharts to avoid jsdom SVG issues
 jest.mock('recharts', () => ({
-  BarChart: ({ children }: any) => <div data-testid="bar-chart">{children}</div>,
+  BarChart: ({ children }: { children: React.ReactNode }) => <div data-testid="bar-chart">{children}</div>,
   Bar: () => <div />,
   XAxis: () => <div />,
   YAxis: () => <div />,
   Tooltip: () => <div />,
   Legend: () => <div />,
-  ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
+  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 jest.mock('@/components/LiveLog', () => ({
   LiveLog: ({ url, onDone }: { url: string; onDone?: (s: boolean) => void }) => {
-    const MockES = (global as any).EventSource;
+    const MockES = globalThis.EventSource;
     const es = new MockES(url);
-    es.addEventListener('done', (e: any) => {
+    es.addEventListener('done', (e: MessageEvent) => {
       const d = JSON.parse(e.data);
       const success = d.message?.includes('successfully') || d.message?.includes('code 0');
       onDone?.(success);
@@ -65,7 +66,7 @@ describe('TrainPage', () => {
 
     await waitFor(() => {
       const resultsCalls = mockFetch.mock.calls.filter(
-        ([url]: any) => typeof url === 'string' && url.includes('/api/train/results')
+        ([url]: [string]) => typeof url === 'string' && url.includes('/api/train/results')
       );
       expect(resultsCalls.length).toBeGreaterThanOrEqual(2);
     });

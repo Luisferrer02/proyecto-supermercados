@@ -6,9 +6,9 @@ import { getLatestEventSource, clearEventSources, simulateSingleStream } from '@
 
 jest.mock('@/components/LiveLog', () => ({
   LiveLog: ({ url, onDone }: { url: string; onDone?: (s: boolean) => void }) => {
-    const MockES = (global as any).EventSource;
+    const MockES = globalThis.EventSource;
     const es = new MockES(url);
-    es.addEventListener('done', (e: any) => {
+    es.addEventListener('done', (e: MessageEvent) => {
       const d = JSON.parse(e.data);
       const success = d.message?.includes('successfully') || d.message?.includes('code 0');
       onDone?.(success);
@@ -47,7 +47,7 @@ describe('EvaluatePage', () => {
         ],
         running: false,
       }),
-    } as Response)) as any;
+    } as Response)) as typeof fetch;
 
     render(<EvaluatePage />);
     await waitFor(() => {
@@ -74,7 +74,7 @@ describe('EvaluatePage', () => {
 
     await waitFor(() => {
       const statusCalls = mockFetch.mock.calls.filter(
-        ([url]: any) => typeof url === 'string' && url.includes('/api/evaluate/status')
+        ([url]: [string]) => typeof url === 'string' && url.includes('/api/evaluate/status')
       );
       expect(statusCalls.length).toBeGreaterThanOrEqual(2);
     });
