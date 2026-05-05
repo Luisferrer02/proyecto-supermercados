@@ -78,15 +78,13 @@ class RackEnv:
         return np.concatenate([self.products, shelves], axis=1)
 
     def _total_profit(self) -> float:
-        total = 0.0
-        for i in range(self.n):
-            total += compute_product_profit(
-                self.products[i, 0],  # price
-                self.products[i, 1],  # margin
-                self.products[i, 2],  # sales
-                int(self.shelf_levels[i]),
-            )
-        return total
+        mults = np.array([compute_product_profit(1.0, 100.0, 1.0, int(s))
+                          for s in range(1, NUM_SHELVES + 1)])
+        shelf_mults = mults[self.shelf_levels - 1]
+        return float(np.sum(
+            self.products[:, 0] * (self.products[:, 1] / 100.0)
+            * self.products[:, 2] * shelf_mults
+        ))
 
     @property
     def state_dim(self) -> int:
@@ -142,24 +140,27 @@ class PPOTrainer:
 
     def __init__(self, env: RackEnv, lr: float = 3e-4,
                  gamma: float = 0.99, eps_clip: float = 0.2,
-                 k_epochs: int = 4, hidden: int = 128):
+                 k_epochs: int = 4, hidden: int = 128,
+                 entropy_coef: float = 0.01, max_grad_norm: float = 0.5):
         self.env = env
         self.gamma = gamma
         self.eps_clip = eps_clip
         self.k_epochs = k_epochs
+        self.entropy_coef = entropy_coef
+        self.max_grad_norm = max_grad_norm
 
         self.policy = ActorCritic(env.state_dim, env.n_products, hidden)
         self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
 
     # -- action selection ----------------------------------------------------
 
-    def select_action(self, state: np.ndarray) -> Tuple[Tuple[int, int], torch.Tensor, torch.Tensor]:
+    def select_action(self, state: np.ndarray) -> Tuple[Tuple[int, int], torch.Tensor, float]:
         """Pick a swap action using the actor's current policy."""
-        flat = torch.FloatTensor(state.flatten()).unsqueeze(0)
+        flat = torch.as_tensor(state.flatten(), dtype=torch.float32).unsqueeze(0)
         logits, value = self.policy(flat)
-        logits = torch.clamp(logits, -20, 20)  # prevent overflow
+        logits = torch.clamp(logits, -20, 20)
         probs = torch.softmax(logits, dim=-1).squeeze(0)
-        probs = probs + 1e-8  # prevent zero probabilities
+        probs = probs + 1e-8
         probs = probs / probs.sum()
 
         # Sample two distinct product indices
@@ -167,7 +168,7 @@ class PPOTrainer:
         idx_a, idx_b = indices[0].item(), indices[1].item()
         log_prob = torch.log(probs[idx_a]) + torch.log(probs[idx_b])
 
-        return (idx_a, idx_b), log_prob, value.squeeze()
+        return (idx_a, idx_b), log_prob, value.squeeze().item()
 
     # -- training ------------------------------------------------------------
 
@@ -188,7 +189,7 @@ class PPOTrainer:
                 action, log_prob, value = self.select_action(state)
                 next_state, reward, done, _ = self.env.step(action)
 
-                states.append(torch.FloatTensor(state.flatten()))
+                states.append(torch.as_tensor(state.flatten(), dtype=torch.float32))
                 actions.append(action)
                 log_probs.append(log_prob)
                 rewards.append(reward)
@@ -210,7 +211,7 @@ class PPOTrainer:
                 returns.insert(0, discounted)
 
             returns_t = torch.FloatTensor(returns)
-            values_t = torch.stack(values).detach()
+            values_t = torch.FloatTensor(values)
             advantages = returns_t - values_t
 
             if advantages.std() > 1e-6:
@@ -219,32 +220,35 @@ class PPOTrainer:
             old_log_probs = torch.stack(log_probs).detach()
             states_t = torch.stack(states)
 
-            # -- PPO update --------------------------------------------------
-            for _ in range(self.k_epochs):
-                new_log_probs = []
-                new_values = []
-                for s, a in zip(states_t, actions, strict=True):
-                    flat = s.unsqueeze(0)
-                    logits, v = self.policy(flat)
-                    logits = torch.clamp(logits, -20, 20)
-                    probs = torch.softmax(logits, dim=-1).squeeze(0)
-                    lp = torch.log(probs[a[0]] + 1e-8) + torch.log(probs[a[1]] + 1e-8)
-                    new_log_probs.append(lp)
-                    new_values.append(v.squeeze())
+            # -- Batched PPO update ------------------------------------------
+            actions_a = torch.LongTensor([a[0] for a in actions])
+            actions_b = torch.LongTensor([a[1] for a in actions])
 
-                new_log_probs_t = torch.stack(new_log_probs)
-                new_values_t = torch.stack(new_values)
+            for _ in range(self.k_epochs):
+                logits, new_values = self.policy(states_t)
+                logits = torch.clamp(logits, -20, 20)
+                probs = torch.softmax(logits, dim=-1)
+
+                # Batched log-prob computation
+                lp_a = torch.log(probs[range(len(actions_a)), actions_a] + 1e-8)
+                lp_b = torch.log(probs[range(len(actions_b)), actions_b] + 1e-8)
+                new_log_probs_t = lp_a + lp_b
+                new_values_t = new_values.squeeze(-1)
 
                 ratio = torch.exp(new_log_probs_t - old_log_probs)
                 surr1 = ratio * advantages
                 surr2 = torch.clamp(ratio, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
 
+                # Entropy bonus for exploration
+                entropy = -(probs * torch.log(probs + 1e-8)).sum(dim=-1).mean()
+
                 actor_loss = -torch.min(surr1, surr2).mean()
                 critic_loss = nn.MSELoss()(new_values_t, returns_t)
-                loss = actor_loss + 0.5 * critic_loss
+                loss = actor_loss + 0.5 * critic_loss - self.entropy_coef * entropy
 
                 self.optimizer.zero_grad()
                 loss.backward()
+                nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
                 self.optimizer.step()
 
         return episode_rewards

@@ -102,7 +102,7 @@ class TestPPOTrainer:
         assert 0 <= action[1] < 5
         assert action[0] != action[1]
         assert log_prob.shape == ()
-        assert value.shape == ()
+        assert isinstance(value, float)
 
     def test_train_smoke(self):
         """Train for a few episodes — just verify it doesn't crash."""
