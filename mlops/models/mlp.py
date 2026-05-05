@@ -21,8 +21,21 @@ class ProfitLiftMLP(nn.Module):
             prev = h
         layers.append(nn.Linear(prev, 1))
         self.net = nn.Sequential(*layers)
+        self._init_weights()
+
+    def _init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, nonlinearity="relu")
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if x.size(0) == 1 and self.training:
+            self.eval()
+            out = self.net(x).squeeze(-1)
+            self.train()
+            return out
         return self.net(x).squeeze(-1)
 
 

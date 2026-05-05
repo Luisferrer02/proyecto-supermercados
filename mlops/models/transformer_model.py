@@ -75,6 +75,14 @@ class ProfitLiftTransformer(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(d_model, 1),
         )
+        self._init_weights()
+
+    def _init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -85,9 +93,14 @@ class ProfitLiftTransformer(nn.Module):
         """
         batch, seq_len, feat = x.shape
 
-        # Standardize features across the batch
-        x_flat = x.reshape(-1, feat)             # (batch*seq, feat)
-        x_flat = self.feature_norm(x_flat)       # BatchNorm per feature
+        # Standardize features across the batch (handle batch_size=1)
+        x_flat = x.reshape(-1, feat)
+        if x_flat.size(0) == 1 and self.training:
+            self.feature_norm.eval()
+            x_flat = self.feature_norm(x_flat)
+            self.feature_norm.train()
+        else:
+            x_flat = self.feature_norm(x_flat)
         x = x_flat.reshape(batch, seq_len, feat)
 
         x = self.input_proj(x)                   # (batch, n, d_model)
