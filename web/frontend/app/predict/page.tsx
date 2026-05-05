@@ -336,7 +336,7 @@ export default function PredictPage() {
                   {topForecast.map(([cat, mult]) => (
                     <div key={cat} className="bg-muted rounded-lg p-2.5 text-xs">
                       <div className="font-medium truncate">{cat}</div>
-                      <div className={`text-base font-bold mt-0.5 ${mult > 1 ? "text-green-600" : "text-red-600"}`}>
+                      <div className={`text-base font-bold mt-0.5 ${mult > 1 ? "text-amber-600" : "text-blue-600"}`}>
                         ×{mult.toFixed(2)}
                       </div>
                     </div>
