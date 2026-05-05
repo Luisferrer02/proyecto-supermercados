@@ -12,9 +12,27 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  # Gate: ensure CI passed on the tagged commit
+  ci-check:
+    name: Verify CI passed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check CI status
+        run: |
+          SHA=$(git rev-parse HEAD)
+          STATUS=$(gh api repos/${{ github.repository }}/commits/$SHA/status --jq '.state')
+          if [ "$STATUS" != "success" ]; then
+            echo "CI has not passed on this commit (status: $STATUS). Aborting release."
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   publish:
     name: Build + push to GHCR
     runs-on: ubuntu-latest
+    needs: ci-check
     steps:
       - uses: actions/checkout@v4
 

@@ -3,7 +3,7 @@
 # ============================================================================
 # Stage 1 — TypeScript build (Express server)
 # ============================================================================
-FROM node:24-bookworm-slim AS ts-build
+FROM node:20-bookworm-slim AS ts-build
 WORKDIR /build
 
 # Install only deps needed to compile
@@ -26,7 +26,7 @@ RUN rm -rf node_modules && npm ci --omit=dev
 # starting from node:20 and adding Python.
 FROM python:3.12-slim-bookworm AS runtime
 
-ARG NODE_MAJOR=24
+ARG NODE_MAJOR=20
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \

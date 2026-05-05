@@ -115,7 +115,6 @@ jobs:
 
       - name: npm audit (high+)
         run: npm audit --audit-level=high
-        continue-on-error: true
 
   # --------------------------------------------------------------------------
   # Frontend: typecheck, build, lint, audit.
@@ -153,7 +152,6 @@ jobs:
 
       - name: npm audit (high+)
         run: npm audit --audit-level=high
-        continue-on-error: true
 
   # --------------------------------------------------------------------------
   # Backend: Jest unit & integration tests with coverage.
@@ -178,7 +176,7 @@ jobs:
       - run: npm ci
 
       - name: Tests with coverage
-        run: npx jest --coverage
+        run: npx jest --coverage --coverageThreshold='{"global":{"branches":60,"functions":60,"lines":60,"statements":60}}'
 
   # --------------------------------------------------------------------------
   # Frontend: Jest unit & component tests with coverage.
@@ -203,7 +201,7 @@ jobs:
       - run: npm ci
 
       - name: Tests with coverage
-        run: npx jest --coverage
+        run: npx jest --coverage --coverageThreshold='{"global":{"branches":50,"functions":50,"lines":50,"statements":50}}'
 
   # --------------------------------------------------------------------------
   # E2E: Playwright tests with MOCK_PYTHON (no real Python needed).
