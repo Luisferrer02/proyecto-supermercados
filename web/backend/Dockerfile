@@ -10,9 +10,9 @@ WORKDIR /build
 COPY web/backend/package.json web/backend/package-lock.json* ./
 RUN npm ci
 
-COPY web/backend/tsconfig.json ./
+COPY web/backend/tsconfig.json web/backend/tsconfig.build.json ./
 COPY web/backend/src ./src
-RUN npx tsc
+RUN npx tsc -p tsconfig.build.json
 
 # Re-install only production deps for the runtime stage
 RUN rm -rf node_modules && npm ci --omit=dev
