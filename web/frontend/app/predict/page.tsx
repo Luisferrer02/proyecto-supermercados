@@ -242,6 +242,42 @@ export default function PredictPage() {
 
       {results && (
         <div className="space-y-6">
+          {/* Accept / Discard buttons */}
+          <Card className="shadow-sm border-primary/30">
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <p className="text-sm font-medium">¿Aceptar esta colocación?</p>
+                  <p className="text-xs text-muted-foreground">
+                    Aceptar guarda el resultado en la base de conocimiento para futuras predicciones.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      await api.predictAccept(month);
+                      setPastMonths((prev) => [...new Set([...prev, month])].sort());
+                      alert(`✓ ${month} aceptado e ingresado en la base de conocimiento.`);
+                    }}
+                    className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    ✓ Aceptar
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await api.predictDiscard(month);
+                      setResults(null);
+                      setAggregate(null);
+                    }}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    ✗ Descartar
+                  </button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Global movement Sankey — same component used on the home
               page so Avanzado shows the same visual grammar. The card is
               hidden when the optimize aggregate has no movement data. */}
