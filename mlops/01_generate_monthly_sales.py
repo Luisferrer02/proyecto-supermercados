@@ -327,10 +327,8 @@ def _augment_via_llm(df_month, rng, month, year):
         results = llm_augment_batch(batch, month, year)
         return b, start, end, results
 
-    def _apply_results(start, end, results):
-        for col in aug_cols:
-            df_month.iloc[start:end, df_month.columns.get_loc(col)] = [r[col] for r in results]
-
+    # Collect results first, then apply sequentially (thread-safe)
+    all_results = {}
     completed = 0
     try:
         if use_threads:
@@ -341,7 +339,7 @@ def _augment_via_llm(df_month, rng, month, year):
                     futures = {executor.submit(process_batch, b): b for b in batch_indices}
                     for future in as_completed(futures):
                         _, start, end, results = future.result()
-                        _apply_results(start, end, results)
+                        all_results[(start, end)] = results
                         completed += 1
                         print(f"   Batch {completed}/{n_batches} "
                               f"(products {start+1}-{end}) ... OK")
@@ -349,20 +347,26 @@ def _augment_via_llm(df_month, rng, month, year):
         else:
             for b in range(n_batches):
                 _, start, end, results = process_batch(b)
-                _apply_results(start, end, results)
+                all_results[(start, end)] = results
                 completed += 1
                 print(f"   Batch {completed}/{n_batches} "
                       f"(products {start+1}-{end}) ... OK")
     except KeyboardInterrupt:
         print(f"\n\nWARNING: Interrupted at batch {completed}/{n_batches}. "
               f"Filling remaining with heuristics...")
-        for idx in df_month.index:
-            if df_month.loc[idx, "estimated_monthly_sales"] == 0:
-                aug = generate_sales_data(df_month.loc[idx], rng, month)
-                for k, v in aug.items():
-                    df_month.loc[idx, k] = v
+
+    # Apply all results sequentially (no concurrent DataFrame mutation)
+    for (start, end), results in all_results.items():
+        for col in aug_cols:
+            df_month.iloc[start:end, df_month.columns.get_loc(col)] = [r[col] for r in results]
+
+    # Fill any remaining zeros with heuristics
+    for idx in df_month.index:
+        if df_month.loc[idx, "estimated_monthly_sales"] == 0:
+            aug = generate_sales_data(df_month.loc[idx], rng, month)
+            for k, v in aug.items():
+                df_month.loc[idx, k] = v
 
 
 if __name__ == "__main__":
     main()
-    os._exit(0)  # Force exit — kills lingering HTTP threads

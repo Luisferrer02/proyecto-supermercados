@@ -15,6 +15,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import matplotlib
+matplotlib.use("Agg")  # headless — must be before pyplot import
 
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -24,8 +25,6 @@ from matplotlib.path import Path as MplPath
 
 from utils.data_io import load_monthly_csvs
 from utils.retail_physics import NUM_SHELVES, compute_rack_profit, optimize_rack_greedy
-
-matplotlib.use("Agg")  # headless
 
 # ---------------------------------------------------------------------------
 # Config
