@@ -28,6 +28,7 @@ from dotenv import load_dotenv
 
 from models.mlp import build_mlp
 from models.transformer_model import build_transformer
+from utils.training import FEATURE_COLS
 from utils.data_io import get_seasonal_mult
 from utils.explainability import explain_all
 from utils.knowledge_base import ShelfKnowledgeBase
@@ -37,7 +38,6 @@ from utils.retail_physics import (
     SHELF_WIDTH_CM,
     compute_rack_profit,
 )
-from utils.training import FEATURE_COLS, FeatureNormalizer, optimize_rack_mlp
 
 load_dotenv()
 
@@ -186,23 +186,25 @@ def apply_forecast(df: pd.DataFrame, multipliers: dict) -> pd.DataFrame:
     return df
 
 
-def _transformer_score_rack(rack_df: pd.DataFrame, transformer_model) -> float:
-    """Use the Transformer to score a rack layout (sum of predicted profit lifts)."""
+def _transformer_score_rack(rack_df: pd.DataFrame, original_rack_df: pd.DataFrame, transformer_model) -> float:
+    """Use the Transformer to score a rack layout (sum of predicted profit lifts vs original)."""
     n = len(rack_df)
-    shelf_counts = rack_df["shelf_level"].value_counts().to_dict()
-    n_shelves_used = len(shelf_counts)
+    shelf_counts_new = rack_df["shelf_level"].value_counts().to_dict()
+    shelf_counts_orig = original_rack_df["shelf_level"].value_counts().to_dict()
+    n_shelves_used = len(shelf_counts_new)
 
-    features = [
-        [
+    features = []
+    for (_, row), (_, orig_row) in zip(rack_df.iterrows(), original_rack_df.iterrows()):
+        orig_shelf = int(orig_row["shelf_level"])
+        new_shelf = int(row["shelf_level"])
+        features.append([
             row["price_numeric"], row["profit_margin_percentage"],
             row["estimated_monthly_sales"], row["product_width_cm"],
-            int(row["shelf_level"]), int(row["shelf_level"]),
-            shelf_counts.get(int(row["shelf_level"]), 0),
-            shelf_counts.get(int(row["shelf_level"]), 0),
+            orig_shelf, new_shelf,
+            shelf_counts_orig.get(orig_shelf, 0),
+            shelf_counts_new.get(new_shelf, 0),
             n_shelves_used, n,
-        ]
-        for _, row in rack_df.iterrows()
-    ]
+        ])
     X = torch.FloatTensor([features])  # (1, n_products, 10)
     with torch.no_grad():
         return transformer_model(X).sum().item()
@@ -211,8 +213,11 @@ def _transformer_score_rack(rack_df: pd.DataFrame, transformer_model) -> float:
 def optimize_ensemble(df: pd.DataFrame, mlp_path: Path, transformer_path: Path,
                       n_candidates: int = 5) -> pd.DataFrame:
     """Ensemble: MLP proposes N candidate layouts, Transformer picks the best."""
+    from utils.training import FeatureNormalizer, optimize_rack_mlp
+
     input_dim = len(FEATURE_COLS)
 
+    # Load MLP (lift-based)
     mlp = build_mlp(input_dim=input_dim)
     if not mlp_path.exists():
         print(f"   ERROR: No MLP model at {mlp_path}. Run 02_train_models.py first.")
@@ -220,7 +225,7 @@ def optimize_ensemble(df: pd.DataFrame, mlp_path: Path, transformer_path: Path,
     mlp.load_state_dict(torch.load(mlp_path, weights_only=True))
     mlp.eval()
 
-    # Load feature normalizer (saved by 02_train_models.py)
+    # Load normalizer
     normalizer = None
     normalizer_path = mlp_path.parent / "normalizer.pth"
     if normalizer_path.exists():
@@ -229,6 +234,7 @@ def optimize_ensemble(df: pd.DataFrame, mlp_path: Path, transformer_path: Path,
         normalizer.mean = data["mean"]
         normalizer.std = data["std"]
 
+    # Load Transformer (for scoring candidates)
     transformer = build_transformer(input_dim=input_dim)
     if not transformer_path.exists():
         print(f"   ERROR: No Transformer model at {transformer_path}. Run 02_train_models.py first.")
@@ -245,6 +251,7 @@ def optimize_ensemble(df: pd.DataFrame, mlp_path: Path, transformer_path: Path,
             optimized_dfs.append(rack_df)
             continue
 
+        # MLP generates N candidate layouts (greedy + noise)
         noise_levels = [0.0] + [5.0 * (j + 1) for j in range(n_candidates - 1)]
         candidates = [
             optimize_rack_mlp(rack_df, mlp, NUM_SHELVES, SHELF_WIDTH_CM,
@@ -252,7 +259,8 @@ def optimize_ensemble(df: pd.DataFrame, mlp_path: Path, transformer_path: Path,
             for noise in noise_levels
         ]
 
-        best = max(candidates, key=lambda c: _transformer_score_rack(c, transformer))
+        # Transformer scores each candidate vs original — pick the best
+        best = max(candidates, key=lambda c: _transformer_score_rack(c, rack_df, transformer))
         optimized_dfs.append(best)
 
         if (i + 1) % 50 == 0 or i == 0:
@@ -347,8 +355,9 @@ def main():
     try:
         year_s, month_s = args.month.split("-")
         target_year, target_month = int(year_s), int(month_s)
-        assert 1 <= target_month <= 12
-    except (ValueError, IndexError, AssertionError):
+        if not (1 <= target_month <= 12):
+            raise ValueError("month out of range")
+    except (ValueError, IndexError):
         print(" Invalid month format. Use YYYY-MM (e.g. 2026-01)")
         sys.exit(1)
 
