@@ -366,6 +366,8 @@ def main():
     parser.add_argument("--data-dir", type=str, default=str(MONTHLY_DIR))
     parser.add_argument("--n-candidates", type=int, default=10)
     parser.add_argument("--dry-run", action="store_true", help="Use heuristic forecast instead of LLM")
+    parser.add_argument("--accept", action="store_true",
+                        help="Auto-accept: save to monthly/ and ingest into RAG")
     args = parser.parse_args()
 
     try:
@@ -436,19 +438,23 @@ def main():
 
     # Step 6: Save optimized month into data/monthly/ and ingest into RAG
     # so the next month's prediction can use this month as context.
-    print("\n  Step 6: Adding optimized month to knowledge base...")
-    month_name_lower = MONTH_NAMES[target_month].lower()
-    monthly_csv = MONTHLY_DIR / f"sales_{target_year}_{target_month:02d}_{month_name_lower}.csv"
-    MONTHLY_DIR.mkdir(parents=True, exist_ok=True)
-    optimized_df.to_csv(monthly_csv, index=False)
-    print(f"   Saved → {monthly_csv}")
+    if args.accept:
+        print("\n  Step 6: Adding optimized month to knowledge base...")
+        month_name_lower = MONTH_NAMES[target_month].lower()
+        monthly_csv = MONTHLY_DIR / f"sales_{target_year}_{target_month:02d}_{month_name_lower}.csv"
+        MONTHLY_DIR.mkdir(parents=True, exist_ok=True)
+        optimized_df.to_csv(monthly_csv, index=False)
+        print(f"   Saved → {monthly_csv}")
 
-    try:
-        kb = ShelfKnowledgeBase()
-        n_chunks = kb.ingest_csv(monthly_csv)
-        print(f"   Ingested into RAG: {n_chunks} category summaries")
-    except Exception as exc:
-        print(f"   ⚠ Could not ingest into RAG: {exc}")
+        try:
+            kb = ShelfKnowledgeBase()
+            n_chunks = kb.ingest_csv(monthly_csv)
+            print(f"   Ingested into RAG: {n_chunks} category summaries")
+        except Exception as exc:
+            print(f"   ⚠ Could not ingest into RAG: {exc}")
+    else:
+        print("\n  Results generated but NOT accepted into knowledge base.")
+        print("  Use --accept flag or accept via the web dashboard to commit.")
 
     print("\n  Done! Check results/ for output files.")
 

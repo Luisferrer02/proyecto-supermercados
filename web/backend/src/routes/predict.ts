@@ -45,6 +45,36 @@ router.post('/stop', (_req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
+// POST /api/predict/accept?month=YYYY-MM — accept prediction into RAG
+router.post('/accept', (req: Request, res: Response) => {
+  const month = String(req.query.month || '');
+  if (!/^\d{4}-\d{2}$/.test(month)) {
+    res.status(400).json({ error: 'month must be YYYY-MM format' });
+    return;
+  }
+  runPythonWithSSE(res, 'accept', '06_accept.py', ['--month', month]);
+});
+
+// POST /api/predict/discard?month=YYYY-MM — delete prediction results
+router.post('/discard', (req: Request, res: Response) => {
+  const month = String(req.query.month || '');
+  const [year, mon] = month.split('-');
+  if (!year || !mon || !MONTH_NAMES[mon]) {
+    res.status(400).json({ error: 'month must be YYYY-MM format' });
+    return;
+  }
+  const monthName = MONTH_NAMES[mon];
+  const resultsDir = process.env.RESULTS_DIR!;
+  const files = [
+    path.join(resultsDir, `optimized_${year}_${mon}_${monthName}.csv`),
+    path.join(resultsDir, `forecast_${year}_${mon}.json`),
+    path.join(resultsDir, `explanations_${year}_${mon}.json`),
+  ];
+  let deleted = 0;
+  files.forEach(f => { if (fs.existsSync(f)) { fs.unlinkSync(f); deleted++; } });
+  res.json({ ok: true, deleted });
+});
+
 // GET /api/predict/results?month=YYYY-MM
 router.get('/results', (req: Request, res: Response) => {
   const month = String(req.query.month || '');
