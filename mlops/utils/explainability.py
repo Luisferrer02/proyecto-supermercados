@@ -62,8 +62,11 @@ def explain_rack(original_rack: pd.DataFrame,
     if "name" not in original_rack.columns or "name" not in optimized_rack.columns:
         return []
 
-    original_by_name = original_rack.set_index("name")
-    optimized_by_name = optimized_rack.set_index("name")
+    # Handle duplicate product names by keeping only the first occurrence
+    original_dedup = original_rack.drop_duplicates(subset="name", keep="first")
+    optimized_dedup = optimized_rack.drop_duplicates(subset="name", keep="first")
+    original_by_name = original_dedup.set_index("name")
+    optimized_by_name = optimized_dedup.set_index("name")
 
     # Reference stats computed on the rack (not on the full catalogue) —
     # reasoning is always local so the manager gets context-specific

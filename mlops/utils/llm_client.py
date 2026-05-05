@@ -89,7 +89,6 @@ def _get_hf_pipeline(model_id: str):
             _hf_pipeline.model.generation_config = GenerationConfig()
             print("    Model loaded.")
         return _hf_pipeline
-        return _hf_pipeline
 
 
 # ---------------------------------------------------------------------------
@@ -265,6 +264,10 @@ def _chat_remote(
                 return content.strip()
             except Exception as exc:
                 msg = str(exc)[:140]
+                # Redact API key if it appears in error message
+                api_key_short = api_key[:8] if api_key else ""
+                if api_key_short and api_key_short in msg:
+                    msg = msg.replace(api_key, "[REDACTED]")
                 is_rate_limited = "429" in msg or "rate" in msg.lower()
                 logger(f"      -> {'rate-limited' if is_rate_limited else 'error'}: {msg}")
                 time.sleep(min(2 ** attempt + random.random(), 8.0))

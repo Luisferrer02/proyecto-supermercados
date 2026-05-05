@@ -8,13 +8,23 @@ Consolidates helpers that were duplicated across 01_augment_data.py,
 
 from __future__ import annotations
 
-import sys
+import re
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from utils.retail_physics import NUM_SHELVES
+
+
+# ---------------------------------------------------------------------------
+# Filename parsing (inlined to avoid hidden dependency on knowledge_base)
+# ---------------------------------------------------------------------------
+
+def parse_month_from_filename(filename: str):
+    """Extract (year, month) from 'sales_YYYY_MM_monthname.csv'."""
+    m = re.match(r"sales_(\d{4})_(\d{2})_", filename)
+    return (int(m.group(1)), int(m.group(2))) if m else None
 
 # ---------------------------------------------------------------------------
 # Price parsing
@@ -51,23 +61,22 @@ def load_monthly_csvs(
     add_month_cols : bool
         If True, add ``_year`` and ``_month`` columns parsed from filenames.
     required : bool
-        If True and no CSVs are found, print an error and ``sys.exit(1)``.
+        If True and no CSVs are found, raise FileNotFoundError.
 
     Returns
     -------
     pd.DataFrame
         Concatenated DataFrame of all monthly CSVs.
     """
-    from utils.knowledge_base import parse_month_from_filename
-
     csv_dir = Path(csv_dir)
     csv_files = sorted(csv_dir.glob("sales_*.csv"))
 
     if not csv_files:
         if required:
-            print(f"ERROR: No sales_*.csv files found in {csv_dir}")
-            print("       Run 01_generate_monthly_sales.py first.")
-            sys.exit(1)
+            raise FileNotFoundError(
+                f"No sales_*.csv files found in {csv_dir}. "
+                "Run 01_generate_monthly_sales.py first."
+            )
         return pd.DataFrame()
 
     dfs = []

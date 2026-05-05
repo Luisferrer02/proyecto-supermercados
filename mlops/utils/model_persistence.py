@@ -92,19 +92,28 @@ def save_model(
 
 def _append_manifest(models_dir: Path, record: Dict[str, Any]) -> None:
     """Append a save record to models/manifest.json, keeping full history."""
-    manifest_path = models_dir / MANIFEST_FILENAME
-    history: list = []
-    if manifest_path.exists():
-        try:
-            history = json.loads(manifest_path.read_text(encoding="utf-8"))
-            if not isinstance(history, list):
-                history = []
-        except json.JSONDecodeError:
-            history = []
+    import fcntl
 
-    history.append(record)
-    manifest_path.write_text(
-        json.dumps(history, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
+    manifest_path = models_dir / MANIFEST_FILENAME
+    lock_path = models_dir / f".{MANIFEST_FILENAME}.lock"
+
+    with open(lock_path, "w") as lock_file:
+        fcntl.flock(lock_file, fcntl.LOCK_EX)
+        try:
+            history: list = []
+            if manifest_path.exists():
+                try:
+                    history = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    if not isinstance(history, list):
+                        history = []
+                except json.JSONDecodeError:
+                    history = []
+
+            history.append(record)
+            manifest_path.write_text(
+                json.dumps(history, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
 

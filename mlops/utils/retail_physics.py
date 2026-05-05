@@ -227,6 +227,41 @@ def generate_synthetic_training_data(df: pd.DataFrame,
     return pd.DataFrame(records)
 
 
+def generate_absolute_profit_data(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
+    """Generate training data where each sample is (product_features, shelf) → absolute_profit.
+
+    For every product in the dataset, compute its profit on each of the 7 shelves.
+    This gives 7 samples per product — the model learns to predict how much profit
+    a product generates on any given shelf.
+    """
+    records = []
+
+    for rack_id in df["rack_id"].unique():
+        rack_df = df[df["rack_id"] == rack_id]
+        if len(rack_df) == 0:
+            continue
+
+        for _, row in rack_df.iterrows():
+            base_profit = (
+                row["price_numeric"]
+                * (row["profit_margin_percentage"] / 100.0)
+                * row["estimated_monthly_sales"]
+            )
+            for shelf in range(1, NUM_SHELVES + 1):
+                mult = SHELF_MULTIPLIERS.get(shelf, 1.0)
+                profit = base_profit * mult
+                records.append({
+                    "price_numeric": row["price_numeric"],
+                    "profit_margin_percentage": row["profit_margin_percentage"],
+                    "estimated_monthly_sales": row["estimated_monthly_sales"],
+                    "product_width_cm": row["product_width_cm"],
+                    "shelf": shelf,
+                    "profit": profit,
+                })
+
+    return pd.DataFrame(records)
+
+
 def optimize_rack_greedy(df_rack: pd.DataFrame) -> pd.DataFrame:
     """
     Greedy optimizer: for each product in the rack, try every shelf
@@ -242,18 +277,59 @@ def optimize_rack_greedy(df_rack: pd.DataFrame) -> pd.DataFrame:
     )
     df_opt = df_opt.sort_values("_base_profit", ascending=False)
 
+    # Start with zero capacity (we reassign all products)
     capacity = dict.fromkeys(range(1, NUM_SHELVES + 1), SHELF_WIDTH_CM)
 
     for idx in df_opt.index:
         w = df_opt.loc[idx, "product_width_cm"]
-        best_shelf = df_opt.loc[idx, "shelf_level"]
-        best_mult = get_shelf_multiplier(best_shelf)
+        best_shelf = int(df_opt.loc[idx, "shelf_level"])
+        best_mult = -1.0
 
         for s in range(1, NUM_SHELVES + 1):
             m = get_shelf_multiplier(s)
             if m > best_mult and capacity[s] >= w:
                 best_shelf = s
                 best_mult = m
+
+        df_opt.loc[idx, "shelf_level"] = best_shelf
+        capacity[best_shelf] -= w
+
+    return df_opt.drop(columns=["_base_profit"])
+
+
+
+
+def optimize_rack_advanced(df_rack: pd.DataFrame) -> pd.DataFrame:
+    """Greedy optimizer using the advanced profit formula.
+
+    For each product (highest base profit first), try every shelf and pick
+    the one that maximises the total rack profit including crowding, spread,
+    and diminishing returns.
+    """
+    df_opt = df_rack.copy()
+    df_opt["_base_profit"] = (
+        df_opt["price_numeric"]
+        * (df_opt["profit_margin_percentage"] / 100.0)
+        * df_opt["estimated_monthly_sales"]
+    )
+    df_opt = df_opt.sort_values("_base_profit", ascending=False)
+
+    capacity = dict.fromkeys(range(1, NUM_SHELVES + 1), SHELF_WIDTH_CM)
+
+    for idx in df_opt.index:
+        w = df_opt.loc[idx, "product_width_cm"]
+        original_shelf = int(df_opt.loc[idx, "shelf_level"])
+        best_shelf = original_shelf
+        best_profit = -float("inf")
+
+        for s in range(1, NUM_SHELVES + 1):
+            if capacity[s] < w:
+                continue
+            df_opt.loc[idx, "shelf_level"] = s
+            rack_profit = compute_rack_profit_advanced(df_opt)
+            if rack_profit > best_profit:
+                best_profit = rack_profit
+                best_shelf = s
 
         df_opt.loc[idx, "shelf_level"] = best_shelf
         capacity[best_shelf] -= w
