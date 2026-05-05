@@ -58,6 +58,11 @@ router.get('/run', async (req: Request, res: Response) => {
     : defaultTargetMonth();
   const dryRun = req.query.dryRun === 'true';
 
+  if (!/^\d{4}-\d{2}$/.test(month)) {
+    res.status(400).json({ error: 'month must be YYYY-MM format' });
+    return;
+  }
+
   const predictArgs = ['--month', month];
   if (dryRun) predictArgs.push('--dry-run');
 

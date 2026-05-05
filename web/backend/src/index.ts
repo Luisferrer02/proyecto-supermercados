@@ -15,8 +15,27 @@ import { optimizeRouter } from './routes/optimize';
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
-app.use(cors({ origin: ['http://localhost:3000', 'http://127.0.0.1:3000'] }));
-app.use(express.json());
+// Security headers
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const helmet = require('helmet');
+  app.use(helmet());
+} catch { /* helmet not installed — skip in dev */ }
+
+// Rate limiting
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const rateLimit = require('express-rate-limit');
+  app.use('/api/', rateLimit({ windowMs: 60_000, max: 100 }));
+} catch { /* express-rate-limit not installed — skip in dev */ }
+
+// CORS from environment
+const corsOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000')
+  .split(',').map(s => s.trim());
+app.use(cors({ origin: corsOrigins }));
+
+// Body size limit
+app.use(express.json({ limit: '1mb' }));
 
 // Serve generated chart PNGs and result CSVs as static files
 const resultsDir = process.env.RESULTS_DIR || path.join(process.env.MLOPS_DIR || '', 'results');

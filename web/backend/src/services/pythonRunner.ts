@@ -7,14 +7,43 @@ import { mockRunPythonWithSSE, mockRunPythonChainWithSSE } from './mockPython';
 const MLOPS_DIR = process.env.MLOPS_DIR!;
 const PYTHON = process.env.PYTHON_PATH || 'python3';
 
-// Pick the first venv activate script that actually exists. Override via VENV_DIR.
-export function resolveVenvActivate(): string {
+/**
+ * Validate that an argument is safe for shell execution.
+ * Rejects any string containing shell metacharacters.
+ */
+export function sanitizeArg(arg: string): string {
+  if (/[`$\\!;&|<>(){}\n\r]/.test(arg)) {
+    throw new Error(`Unsafe argument rejected: ${arg}`);
+  }
+  return arg;
+}
+
+// Pick the first venv bin directory that actually exists. Override via VENV_DIR.
+export function resolveVenvBin(): string {
   const candidates = [
-    process.env.VENV_DIR ? path.join(process.env.VENV_DIR, 'bin', 'activate') : '',
-    path.join(MLOPS_DIR, 'venv-new', 'bin', 'activate'),
-    path.join(MLOPS_DIR, 'venv', 'bin', 'activate'),
+    process.env.VENV_DIR ? path.join(process.env.VENV_DIR, 'bin') : '',
+    path.join(MLOPS_DIR, 'venv-new', 'bin'),
+    path.join(MLOPS_DIR, 'venv', 'bin'),
   ].filter(Boolean);
-  return candidates.find(p => fs.existsSync(p)) ?? '';
+  return candidates.find(p => fs.existsSync(path.join(p, 'python'))) ?? '';
+}
+
+/** Build env with venv's bin prepended to PATH (no shell needed). */
+function buildEnv(): Record<string, string> {
+  const env = { ...process.env, PYTHONUNBUFFERED: '1' } as Record<string, string>;
+  const venvBin = resolveVenvBin();
+  if (venvBin) {
+    env.VIRTUAL_ENV = path.dirname(venvBin);
+    env.PATH = `${venvBin}:${env.PATH || ''}`;
+  }
+  return env;
+}
+
+/** Resolve the python binary path. */
+function resolvePython(): string {
+  const venvBin = resolveVenvBin();
+  if (venvBin) return path.join(venvBin, 'python');
+  return PYTHON;
 }
 
 // Track running processes to prevent duplicate runs
@@ -77,21 +106,12 @@ export async function runPythonChainWithSSE(
 
     const exitCode = await new Promise<number>((resolve) => {
       const scriptPath = path.join(MLOPS_DIR, step.script);
-      const venvActivate = resolveVenvActivate();
-      let proc: ChildProcess;
-      if (fs.existsSync(venvActivate)) {
-        const quotedArgs = [scriptPath, ...step.args]
-          .map(a => `"${a.replace(/"/g, '\\"')}"`).join(' ');
-        proc = spawn('/bin/bash',
-          ['-c', `source "${venvActivate}" && python -u ${quotedArgs}`],
-          { cwd: MLOPS_DIR, env: { ...process.env, PYTHONUNBUFFERED: '1' } });
-      } else {
-        proc = spawn(PYTHON, ['-u', scriptPath, ...step.args], {
-          cwd: MLOPS_DIR,
-          env: { ...process.env, PYTHONUNBUFFERED: '1' },
-          shell: process.platform === 'win32',
-        });
-      }
+      const safeArgs = step.args.map(sanitizeArg);
+      const pythonBin = resolvePython();
+      const proc: ChildProcess = spawn(pythonBin, ['-u', scriptPath, ...safeArgs], {
+        cwd: MLOPS_DIR,
+        env: buildEnv(),
+      });
 
       running[key] = proc;
 
@@ -157,25 +177,12 @@ export function runPythonWithSSE(
   }
 
   const scriptPath = path.join(MLOPS_DIR, scriptName);
-  const venvActivate = path.join(MLOPS_DIR, 'venv', 'bin', 'activate');
-  // When a POSIX-style venv exists (Mac/Linux dev setup) we use bash so the
-  // child runs inside it. On Windows (no bash, no venv/bin/activate) fall
-  // back to spawning python directly with the configured PYTHON_PATH.
-  let proc: ChildProcess;
-  if (fs.existsSync(venvActivate)) {
-    const quotedArgs = [scriptPath, ...args].map(a => `"${a.replace(/"/g, '\\"')}"`).join(' ');
-    const shellCmd = `source "${venvActivate}" && python -u ${quotedArgs}`;
-    proc = spawn('/bin/bash', ['-c', shellCmd], {
-      cwd: MLOPS_DIR,
-      env: { ...process.env, PYTHONUNBUFFERED: '1' },
-    });
-  } else {
-    proc = spawn(PYTHON, ['-u', scriptPath, ...args], {
-      cwd: MLOPS_DIR,
-      env: { ...process.env, PYTHONUNBUFFERED: '1' },
-      shell: process.platform === 'win32',
-    });
-  }
+  const safeArgs = args.map(sanitizeArg);
+  const pythonBin = resolvePython();
+  const proc: ChildProcess = spawn(pythonBin, ['-u', scriptPath, ...safeArgs], {
+    cwd: MLOPS_DIR,
+    env: buildEnv(),
+  });
 
   running[key] = proc;
 

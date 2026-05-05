@@ -21,13 +21,19 @@ router.get('/status', (_req: Request, res: Response) => {
 router.get('/stream', (req: Request, res: Response) => {
   const { month, category, dryRun } = req.query;
 
-  if (!month || typeof month !== 'string') {
-    res.status(400).json({ error: 'month query param required (YYYY-MM)' });
+  if (!month || typeof month !== 'string' || !/^\d{4}-\d{2}$/.test(month)) {
+    res.status(400).json({ error: 'month query param required (YYYY-MM format)' });
     return;
   }
 
   const args: string[] = ['--month', month];
-  if (category && typeof category === 'string') args.push('--category', category);
+  if (category && typeof category === 'string') {
+    if (!/^[A-Za-zÀ-ÿ0-9 _-]+$/.test(category)) {
+      res.status(400).json({ error: 'Invalid category format' });
+      return;
+    }
+    args.push('--category', category);
+  }
   if (dryRun === 'true') args.push('--dry-run');
 
   runPythonWithSSE(res, 'predict', '05_predict.py', args);

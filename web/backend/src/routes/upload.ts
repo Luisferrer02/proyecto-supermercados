@@ -28,8 +28,12 @@ function runValidator(target: string): Promise<{ ok: boolean; output: string }> 
 
     let proc;
     if (useBash) {
-      const cmd = `source "${venvActivate}" && python -m utils.csv_schema "${target}"`;
-      proc = spawn('/bin/bash', ['-c', cmd], { cwd: mlopsDir });
+      const venvBin = path.dirname(venvActivate);
+      const pythonBin = path.join(venvBin, 'python');
+      proc = spawn(pythonBin, ['-m', 'utils.csv_schema', target], {
+        cwd: mlopsDir,
+        env: { ...process.env, VIRTUAL_ENV: path.dirname(venvBin), PATH: `${venvBin}:${process.env.PATH}` },
+      });
     } else {
       proc = spawn(PYTHON, ['-m', 'utils.csv_schema', target], { cwd: mlopsDir });
     }
@@ -56,10 +60,10 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (_req, file, cb) => {
-    if (file.originalname.match(/^sales_.*\.csv$/)) {
+    if (file.originalname.match(/^sales_\d{4}_\d{2}_[a-z]+\.csv$/)) {
       cb(null, true);
     } else {
-      cb(new Error('Only files named sales_*.csv are accepted'));
+      cb(new Error('Only files named sales_YYYY_MM_monthname.csv are accepted'));
     }
   },
 });
