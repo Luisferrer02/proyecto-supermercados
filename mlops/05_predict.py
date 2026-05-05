@@ -261,7 +261,14 @@ def optimize_ensemble(df: pd.DataFrame, mlp_path: Path, transformer_path: Path,
 
         # Transformer scores each candidate vs original — pick the best
         best = max(candidates, key=lambda c: _transformer_score_rack(c, rack_df, transformer))
-        optimized_dfs.append(best)
+
+        # Safety check: only use optimized layout if it actually improves rack profit
+        orig_profit = compute_rack_profit(rack_df)
+        best_profit = compute_rack_profit(best)
+        if best_profit > orig_profit:
+            optimized_dfs.append(best)
+        else:
+            optimized_dfs.append(rack_df)
 
         if (i + 1) % 50 == 0 or i == 0:
             print(f"   Rack {i+1}/{len(rack_ids)}...")
@@ -275,8 +282,14 @@ def optimize_ensemble(df: pd.DataFrame, mlp_path: Path, transformer_path: Path,
 
 def save_results(original_df: pd.DataFrame, optimized_df: pd.DataFrame,
                  target_year: int, target_month: int,
-                 multipliers: dict, forecast_source: str = "unknown"):
-    """Save optimized layout and generate summary."""
+                 multipliers: dict, forecast_source: str = "unknown",
+                 forecasted_df: pd.DataFrame | None = None):
+    """Save optimized layout and generate summary.
+
+    The profit comparison uses forecasted_df (same sales figures as the optimizer
+    saw) so the lift reflects shelf placement improvement only, not the forecast
+    adjustment.
+    """
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     month_name = MONTH_NAMES.get(target_month, str(target_month)).lower()
 
@@ -310,10 +323,13 @@ def save_results(original_df: pd.DataFrame, optimized_df: pd.DataFrame,
     print(f"   OPTIMIZATION RESULTS — {MONTH_NAMES[target_month]} {target_year}")
     print(f"   {'='*60}")
 
+    # Use forecasted_df as baseline (same sales the optimizer used)
+    baseline_df = forecasted_df if forecasted_df is not None else original_df
+
     rack_results = []
     total_orig = total_opt = 0.0
     for rack_id in sorted(optimized_df["rack_id"].unique()):
-        orig_rack = original_df[original_df["rack_id"] == rack_id]
+        orig_rack = baseline_df[baseline_df["rack_id"] == rack_id]
         opt_rack  = optimized_df[optimized_df["rack_id"] == rack_id]
         if orig_rack.empty or opt_rack.empty:
             continue
@@ -416,7 +432,7 @@ def main():
     print(f"   Optimized {len(optimized_df)} products across {optimized_df['rack_id'].nunique()} racks")
 
     save_results(base_df, optimized_df, target_year, target_month, multipliers,
-                 forecast_source=forecast_source)
+                 forecast_source=forecast_source, forecasted_df=forecasted_df)
 
     print("\n  Done! Check results/ for output files.")
 
