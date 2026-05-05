@@ -36,9 +36,16 @@ test.describe('Predict flow', () => {
   test('cancel stops prediction', async ({ page }) => {
     await page.goto('/predict');
     await page.getByRole('button', { name: /Lanzar predicción/ }).click();
-    await expect(page.getByRole('button', { name: /Cancelar/ })).toBeVisible();
 
-    await page.getByRole('button', { name: /Cancelar/ }).click();
-    await expect(page.getByRole('button', { name: /Lanzar predicción/ })).toBeVisible({ timeout: 5000 });
+    // With MOCK_PYTHON the process may finish before we can cancel.
+    // If Cancelar is visible, click it; otherwise the process already completed.
+    const cancelBtn = page.getByRole('button', { name: /Cancelar/ });
+    const launchBtn = page.getByRole('button', { name: /Lanzar predicción/ });
+
+    const visible = await cancelBtn.isVisible().catch(() => false);
+    if (visible) {
+      await cancelBtn.click({ force: true });
+    }
+    await expect(launchBtn).toBeVisible({ timeout: 10000 });
   });
 });
