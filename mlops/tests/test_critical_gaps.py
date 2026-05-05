@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 import torch
 
-from models.mlp import ProfitLiftMLP, build_mlp
+from models.mlp import build_mlp
 from utils.training import (
     FEATURE_COLS,
     FeatureNormalizer,

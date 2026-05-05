@@ -101,16 +101,17 @@ describe('POST /api/upload/validate', () => {
     expect(res.body).toHaveProperty('report');
   });
 
-  it('uses bash when a venv activate script exists', async () => {
+  it('uses venv python when a venv exists', async () => {
     fs.mkdirSync(path.join(dirs.base, 'venv', 'bin'), { recursive: true });
     fs.writeFileSync(path.join(dirs.base, 'venv', 'bin', 'activate'), 'echo activated');
+    fs.writeFileSync(path.join(dirs.base, 'venv', 'bin', 'python'), '#!/bin/sh\n');
     fs.writeFileSync(path.join(dirs.monthly, 'sales_2026_01_january.csv'), 'name,price\na,1');
 
     const res = await request(app).post('/api/upload/validate');
     expect(res.status).toBe(200);
     expect(mockSpawn).toHaveBeenCalledWith(
-      '/bin/bash',
-      expect.arrayContaining(['-c', expect.stringContaining('python -m utils.csv_schema')]),
+      expect.stringContaining('venv/bin/python'),
+      expect.arrayContaining(['-m', 'utils.csv_schema']),
       expect.objectContaining({ cwd: dirs.base }),
     );
   });

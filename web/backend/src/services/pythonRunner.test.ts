@@ -37,7 +37,7 @@ import {
   killProcess,
   runPythonWithSSE,
   runPythonChainWithSSE,
-  resolveVenvActivate,
+  resolveVenvBin,
 } from './pythonRunner';
 
 const mockExistsSync = fs.existsSync as jest.MockedFunction<typeof fs.existsSync>;
@@ -81,16 +81,16 @@ beforeEach(() => {
   mockExistsSync.mockReturnValue(false);
 });
 
-describe('resolveVenvActivate', () => {
+describe('resolveVenvBin', () => {
   it('returns empty string when no venv exists', () => {
-    expect(resolveVenvActivate()).toBe('');
+    expect(resolveVenvBin()).toBe('');
   });
 
-  it('returns the first existing venv path', () => {
+  it('returns the first existing venv bin path', () => {
     mockExistsSync.mockImplementation((p: any) =>
       String(p).includes('venv-new'),
     );
-    expect(resolveVenvActivate()).toContain('venv-new');
+    expect(resolveVenvBin()).toContain('venv-new');
   });
 });
 
@@ -197,11 +197,11 @@ describe('runPythonWithSSE', () => {
     expect(res.end).toHaveBeenCalled();
   });
 
-  it('uses bash when a venv activate script exists', async () => {
+  it('uses venv python when a venv bin exists', async () => {
     const proc = makeFakeProc();
     mockExistsSync.mockImplementation((p: any) => {
       const value = String(p);
-      return value.includes('venv') && value.includes('activate');
+      return value.includes('venv') && value.includes('python');
     });
     mockSpawn.mockReturnValueOnce(proc as any);
     const key = uniqueKey('sse');
@@ -209,8 +209,8 @@ describe('runPythonWithSSE', () => {
 
     runPythonWithSSE(res, key, 'prog.py', ['--flag']);
     expect(mockSpawn).toHaveBeenCalledWith(
-      '/bin/bash',
-      expect.arrayContaining(['-c', expect.stringContaining('source')]),
+      expect.stringContaining('venv'),
+      expect.arrayContaining(['-u', expect.stringContaining('prog.py'), '--flag']),
       expect.objectContaining({ cwd: expect.any(String) }),
     );
 
@@ -292,11 +292,11 @@ describe('runPythonChainWithSSE', () => {
     });
   }, 10000);
 
-  it('uses bash for chain steps when a venv activate script exists', async () => {
+  it('uses venv python for chain steps when a venv bin exists', async () => {
     const proc = makeFakeProc();
     mockExistsSync.mockImplementation((p: any) => {
       const value = String(p);
-      return value.includes('venv') && value.includes('activate');
+      return value.includes('venv') && value.includes('python');
     });
     mockSpawn.mockReturnValueOnce(proc as any);
 
@@ -308,8 +308,8 @@ describe('runPythonChainWithSSE', () => {
 
     await flush(2);
     expect(mockSpawn).toHaveBeenCalledWith(
-      '/bin/bash',
-      expect.arrayContaining(['-c', expect.stringContaining('source')]),
+      expect.stringContaining('venv'),
+      expect.arrayContaining(['-u', expect.stringContaining('ingest.py'), '--month', '2026-03']),
       expect.objectContaining({ cwd: expect.any(String) }),
     );
 

@@ -9,13 +9,12 @@ const router = Router();
 const PYTHON = process.env.PYTHON_PATH || 'python3';
 
 // Runs utils/csv_schema.py on the given path and returns a structured report.
-// Uses the venv python if available; works on mac/linux (bash) and gracefully
-// degrades on windows where the activate script does not exist.
-function findVenvActivate(mlopsDir: string): string {
+// Uses the venv python if available; falls back to PYTHON_PATH.
+function findVenvPython(mlopsDir: string): string {
   const candidates = [
-    process.env.VENV_DIR ? path.join(process.env.VENV_DIR, 'bin', 'activate') : '',
-    path.join(mlopsDir, 'venv-new', 'bin', 'activate'),
-    path.join(mlopsDir, 'venv', 'bin', 'activate'),
+    process.env.VENV_DIR ? path.join(process.env.VENV_DIR, 'bin', 'python') : '',
+    path.join(mlopsDir, 'venv-new', 'bin', 'python'),
+    path.join(mlopsDir, 'venv', 'bin', 'python'),
   ].filter(Boolean);
   return candidates.find(p => fs.existsSync(p)) ?? '';
 }
@@ -23,14 +22,12 @@ function findVenvActivate(mlopsDir: string): string {
 function runValidator(target: string): Promise<{ ok: boolean; output: string }> {
   return new Promise((resolve) => {
     const mlopsDir = process.env.MLOPS_DIR!;
-    const venvActivate = findVenvActivate(mlopsDir);
-    const useBash = !!venvActivate;
+    const venvPython = findVenvPython(mlopsDir);
 
     let proc;
-    if (useBash) {
-      const venvBin = path.dirname(venvActivate);
-      const pythonBin = path.join(venvBin, 'python');
-      proc = spawn(pythonBin, ['-m', 'utils.csv_schema', target], {
+    if (venvPython) {
+      const venvBin = path.dirname(venvPython);
+      proc = spawn(venvPython, ['-m', 'utils.csv_schema', target], {
         cwd: mlopsDir,
         env: { ...process.env, VIRTUAL_ENV: path.dirname(venvBin), PATH: `${venvBin}:${process.env.PATH}` },
       });
