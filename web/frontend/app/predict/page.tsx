@@ -58,6 +58,8 @@ export default function PredictPage() {
   const [results, setResults] = useState<PredictResult | null>(null);
   const [aggregate, setAggregate] = useState<OptimizeAggregate | null>(null);
   const [selectedRack, setSelectedRack] = useState("");
+  const [accepted, setAccepted] = useState(false);
+  const [accepting, setAccepting] = useState(false);
   const [pastMonths, setPastMonths] = useState<string[]>([]);
 
   useEffect(() => {
@@ -71,6 +73,7 @@ export default function PredictPage() {
     setPredError(null);
     setResults(null);
     setAggregate(null);
+    setAccepted(false);
   };
 
   const loadResults = async () => {
@@ -243,6 +246,7 @@ export default function PredictPage() {
       {results && (
         <div className="space-y-6">
           {/* Accept / Discard buttons */}
+          {!accepted && (
           <Card className="shadow-sm border-primary/30">
             <CardContent className="pt-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
@@ -254,22 +258,32 @@ export default function PredictPage() {
                 </div>
                 <div className="flex gap-2">
                   <button
+                    disabled={accepting}
                     onClick={async () => {
-                      await api.predictAccept(month);
-                      setPastMonths((prev) => [...new Set([...prev, month])].sort());
-                      alert(`✓ ${month} aceptado e ingresado en la base de conocimiento.`);
+                      setAccepting(true);
+                      try {
+                        const res = await api.predictAccept(month);
+                        if (res.ok) {
+                          setAccepted(true);
+                          setPastMonths((prev) => [...new Set([...prev, month])].sort());
+                        } else {
+                          alert(`Error: ${res.error || 'No se pudo aceptar'}`);
+                        }
+                      } catch { alert('Error de conexión'); }
+                      setAccepting(false);
                     }}
-                    className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
                   >
-                    ✓ Aceptar
+                    {accepting ? "Guardando…" : "✓ Aceptar"}
                   </button>
                   <button
+                    disabled={accepting}
                     onClick={async () => {
                       await api.predictDiscard(month);
                       setResults(null);
                       setAggregate(null);
                     }}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
                   >
                     ✗ Descartar
                   </button>
@@ -277,6 +291,12 @@ export default function PredictPage() {
               </div>
             </CardContent>
           </Card>
+          )}
+          {accepted && (
+            <div className="rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-700">
+              ✓ Colocación aceptada. El mes <strong>{month}</strong> se ha guardado en la base de conocimiento.
+            </div>
+          )}
 
           {/* Global movement Sankey — same component used on the home
               page so Avanzado shows the same visual grammar. The card is

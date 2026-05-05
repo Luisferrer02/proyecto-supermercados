@@ -46,13 +46,28 @@ router.post('/stop', (_req: Request, res: Response) => {
 });
 
 // POST /api/predict/accept?month=YYYY-MM — accept prediction into RAG
-router.post('/accept', (req: Request, res: Response) => {
+router.post('/accept', async (req: Request, res: Response) => {
   const month = String(req.query.month || '');
   if (!/^\d{4}-\d{2}$/.test(month)) {
     res.status(400).json({ error: 'month must be YYYY-MM format' });
     return;
   }
-  runPythonWithSSE(res, 'accept', '06_accept.py', ['--month', month]);
+  const { execSync } = await import('child_process');
+  const mlopsDir = process.env.MLOPS_DIR!;
+  const { resolveVenvBin } = await import('../services/pythonRunner');
+  const venvBin = resolveVenvBin();
+  const pythonBin = venvBin ? path.join(venvBin, 'python') : 'python3';
+  try {
+    const output = execSync(`${pythonBin} 06_accept.py --month ${month}`, {
+      cwd: mlopsDir,
+      encoding: 'utf-8',
+      timeout: 30000,
+    });
+    res.json({ ok: true, output });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ ok: false, error: msg.slice(0, 500) });
+  }
 });
 
 // POST /api/predict/discard?month=YYYY-MM — delete prediction results
