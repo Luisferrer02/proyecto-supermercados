@@ -85,8 +85,16 @@ export default function PredictPage() {
       }
       setPredError(null);
       setResults(d);
-      const racks = [...new Set(d.products.map((p: Product) => p.rack_id ?? p.Category ?? ""))].filter(Boolean);
-      setSelectedRack((racks[0] as string) ?? "");
+      // Default to the rack with highest improvement
+      if (d.rackSummary) {
+        const bestRack = Object.entries(d.rackSummary)
+          .sort(([, a]: [string, any], [, b]: [string, any]) => (b.optimized - b.original) - (a.optimized - a.original))
+          [0];
+        setSelectedRack(bestRack ? bestRack[0] : "");
+      } else {
+        const racks = [...new Set(d.products.map((p: Product) => p.rack_id ?? p.Category ?? ""))].filter(Boolean);
+        setSelectedRack((racks[0] as string) ?? "");
+      }
 
       // Reuse the aggregate endpoint that powers the home page sankey.
       // It reads the same optimised CSV that 05_predict.py just wrote, so

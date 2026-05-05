@@ -433,6 +433,9 @@ def main():
                                      n_candidates=args.n_candidates)
     print(f"   Optimized {len(optimized_df)} products across {optimized_df['rack_id'].nunique()} racks")
 
+    # Add original shelf for comparison in the web UI
+    optimized_df["original_shelf_level"] = forecasted_df["shelf_level"].values
+
     save_results(base_df, optimized_df, target_year, target_month, multipliers,
                  forecast_source=forecast_source, forecasted_df=forecasted_df)
 

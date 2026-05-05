@@ -141,10 +141,12 @@ router.get('/results', (req: Request, res: Response) => {
     const price = parseFloat(p.price_numeric || p.price || '0');
     const margin = parseFloat(p.profit_margin_percentage || '0') / 100;
     const sales = parseFloat(p.estimated_monthly_sales || '0');
-    const shelf = parseInt(p.shelf_level || '1');
-    const shelfMult = SHELF_MULTIPLIERS[shelf] ?? 0.60;
-    rackMap[rack].optimized += price * margin * sales * shelfMult;
-    rackMap[rack].original += price * margin * sales * 0.95; // baseline approximation
+    const newShelf = parseInt(p.shelf_level || '1');
+    const origShelf = parseInt(p.original_shelf_level || p.shelf_level || '1');
+    const newMult = SHELF_MULTIPLIERS[newShelf] ?? 0.60;
+    const origMult = SHELF_MULTIPLIERS[origShelf] ?? 0.60;
+    rackMap[rack].optimized += price * margin * sales * newMult;
+    rackMap[rack].original += price * margin * sales * origMult;
     rackMap[rack].products += 1;
   });
 
