@@ -89,8 +89,8 @@ export default function PredictPage() {
       setResults(d);
       // Default to the rack with highest improvement
       if (d.rackSummary) {
-        const bestRack = Object.entries(d.rackSummary)
-          .sort(([, a]: [string, any], [, b]: [string, any]) => (b.optimized - b.original) - (a.optimized - a.original))
+        const bestRack = (Object.entries(d.rackSummary) as [string, RackSummary][])
+          .sort(([, a], [, b]) => (b.optimized - b.original) - (a.optimized - a.original))
           [0];
         setSelectedRack(bestRack ? bestRack[0] : "");
       } else {
