@@ -36,19 +36,16 @@ from utils.retail_physics import (
     NUM_SHELVES,
     SHELF_WIDTH_CM,
     compute_rack_profit,
-    generate_absolute_profit_data,
     generate_synthetic_training_data,
     optimize_rack_greedy,
 )
 from utils.training import (
     EPOCHS,
     FEATURE_COLS,
-    PROFIT_FEATURE_COLS,
     FeatureNormalizer,
     LR,
     df_to_tensors,
     make_sequences,
-    optimize_rack_profit_mlp,
     train_model,
 )
 
@@ -296,36 +293,6 @@ def main():
         )
         torch.save({"mean": normalizer.mean, "std": normalizer.std}, RESULTS_DIR / "normalizer.pth")
 
-    if only in (None, "profit_mlp"):
-        print("\n Training Profit MLP (for shelf optimization) …")
-        profit_data = generate_absolute_profit_data(df)
-        # Shuffle before splitting to avoid rack-order bias
-        profit_data = profit_data.sample(frac=1, random_state=42).reset_index(drop=True)
-        n_profit = len(profit_data)
-        n_profit_test = round(n_profit * 0.15)
-        profit_test = profit_data.iloc[:n_profit_test]
-        profit_train = profit_data.iloc[n_profit_test:]
-
-        profit_input_dim = len(PROFIT_FEATURE_COLS)
-        profit_train_X = torch.FloatTensor(profit_train[PROFIT_FEATURE_COLS].to_numpy().copy())
-        profit_train_y = torch.FloatTensor(profit_train["profit"].to_numpy().copy())
-        profit_test_X = torch.FloatTensor(profit_test[PROFIT_FEATURE_COLS].to_numpy().copy())
-        profit_test_y = torch.FloatTensor(profit_test["profit"].to_numpy().copy())
-
-        profit_normalizer = FeatureNormalizer().fit(profit_train_X)
-        profit_train_X_norm = profit_normalizer.transform(profit_train_X)
-        profit_test_X_norm = profit_normalizer.transform(profit_test_X)
-
-        profit_mlp = build_mlp(input_dim=profit_input_dim)
-        profit_metrics = train_model(profit_mlp, profit_train_X_norm, profit_train_y,
-                                      profit_test_X_norm, profit_test_y,
-                                      name="ProfitMLP", epochs=400, batch_size=4096)
-        save_model(profit_mlp, "profit_mlp", RESULTS_DIR,
-                   metadata={"origin": "02_train_models.py", "epochs": 400, **profit_metrics})
-        torch.save({"mean": profit_normalizer.mean, "std": profit_normalizer.std},
-                   RESULTS_DIR / "profit_normalizer.pth")
-        results["ProfitMLP"] = profit_metrics
-
     if only in (None, "lstm"):
         print("\n Training LSTM …")
         results["LSTM"], lstm = _train_seq(
@@ -366,50 +333,67 @@ def main():
         }
 
     if only is None:
-        print("\n Computing model-guided optimizations …")
-        rack_df = df[df["rack_id"] == ppo_results["rack_id"]].head(40).copy()
-        orig_profit = compute_rack_profit(rack_df)
-        rack_layouts = {"Original": rack_df.copy()}
-
-        opt_rack = optimize_rack_profit_mlp(rack_df, profit_mlp, NUM_SHELVES, SHELF_WIDTH_CM,
-                                            normalizer=profit_normalizer)
-        opt_profit = compute_rack_profit(opt_rack)
-        # Safety check: only use if it improves
-        if opt_profit <= orig_profit:
-            opt_rack = rack_df.copy()
-            opt_profit = orig_profit
-        results["ProfitMLP"]["original_profit"] = orig_profit
-        results["ProfitMLP"]["optimized_profit"] = opt_profit
-        print(f"   [ProfitMLP] Orig: €{orig_profit:.2f} → Opt: €{opt_profit:.2f} (Δ = {opt_profit - orig_profit:+.2f})")
-        rack_layouts["ProfitMLP"] = opt_rack
-
-        # MLP (lift-based) optimization
+        print("\n Computing model-guided optimizations (all racks) …")
         from utils.training import optimize_rack_mlp
-        mlp_opt_rack = optimize_rack_mlp(rack_df, mlp, NUM_SHELVES, SHELF_WIDTH_CM, normalizer=normalizer)
-        mlp_opt_profit = compute_rack_profit(mlp_opt_rack)
-        if mlp_opt_profit <= orig_profit:
-            mlp_opt_rack = rack_df.copy()
-            mlp_opt_profit = orig_profit
-        results["MLP"]["original_profit"] = orig_profit
-        results["MLP"]["optimized_profit"] = mlp_opt_profit
-        print(f"   [MLP] Orig: €{orig_profit:.2f} → Opt: €{mlp_opt_profit:.2f} (Δ = {mlp_opt_profit - orig_profit:+.2f})")
-        rack_layouts["MLP"] = mlp_opt_rack
+
+        # Evaluate across all racks in the dataset (not just one)
+        all_racks = df["rack_id"].unique()
+        total_orig = 0.0
+        total_mlp = 0.0
+        total_greedy = 0.0
+        n_improved_mlp = 0
+        n_improved_greedy = 0
+
+        for rack_id in all_racks:
+            rack_df = df[df["rack_id"] == rack_id].copy()
+            if len(rack_df) < 2:
+                continue
+            orig_p = compute_rack_profit(rack_df)
+            total_orig += orig_p
+
+            # MLP optimization
+            mlp_rack = optimize_rack_mlp(rack_df, mlp, NUM_SHELVES, SHELF_WIDTH_CM, normalizer=normalizer)
+            mlp_p = compute_rack_profit(mlp_rack)
+            if mlp_p > orig_p:
+                total_mlp += mlp_p
+                n_improved_mlp += 1
+            else:
+                total_mlp += orig_p
+
+            # Greedy optimization
+            greedy_rack = optimize_rack_greedy(rack_df)
+            greedy_p = compute_rack_profit(greedy_rack)
+            if greedy_p > orig_p:
+                total_greedy += greedy_p
+                n_improved_greedy += 1
+            else:
+                total_greedy += orig_p
+
+        mlp_lift = total_mlp - total_orig
+        greedy_lift = total_greedy - total_orig
+        print(f"   [MLP] Total: €{total_orig:.0f} → €{total_mlp:.0f} (Δ = {mlp_lift:+.0f}, {n_improved_mlp}/{len(all_racks)} racks improved)")
+        print(f"   [Greedy] Total: €{total_orig:.0f} → €{total_greedy:.0f} (Δ = {greedy_lift:+.0f}, {n_improved_greedy}/{len(all_racks)} racks improved)")
+        print(f"   [PPO] Single rack: €{ppo_results['original_profit']:.0f} → €{ppo_results['optimized_profit']:.0f} (Δ = {ppo_results['optimized_profit'] - ppo_results['original_profit']:+.0f})")
+
+        results["MLP"]["original_profit"] = total_orig
+        results["MLP"]["optimized_profit"] = total_mlp
+        results["Greedy"] = {"original_profit": total_orig, "optimized_profit": total_greedy}
 
         for model_name in ["LSTM", "Transformer"]:
-            results[model_name]["original_profit"] = orig_profit
-            results[model_name]["optimized_profit"] = orig_profit
+            results[model_name]["original_profit"] = total_orig
+            results[model_name]["optimized_profit"] = total_orig
             results[model_name]["_note"] = "Prediction model only (no direct shelf assignment)"
 
-    if only is None:
-        greedy_rack = optimize_rack_greedy(rack_df)
-        greedy_profit = compute_rack_profit(greedy_rack)
-        # Safety check: only use if it improves
-        if greedy_profit <= orig_profit:
-            greedy_rack = rack_df.copy()
-            greedy_profit = orig_profit
-        results["Greedy"] = {"original_profit": orig_profit, "optimized_profit": greedy_profit}
-        rack_layouts["Greedy"] = greedy_rack
-        print(f"   [Greedy] Orig: €{orig_profit:.2f} → Opt: €{greedy_profit:.2f} (Δ = {greedy_profit - orig_profit:+.2f})")
+        # Save single-rack layouts for visualization (use PPO rack)
+        ppo_rack_id = ppo_results["rack_id"]
+        rack_df = df[df["rack_id"] == ppo_rack_id].head(40).copy()
+        rack_layouts = {"Original": rack_df.copy()}
+        mlp_opt = optimize_rack_mlp(rack_df, mlp, NUM_SHELVES, SHELF_WIDTH_CM, normalizer=normalizer)
+        if compute_rack_profit(mlp_opt) > compute_rack_profit(rack_df):
+            rack_layouts["MLP"] = mlp_opt
+        greedy_opt = optimize_rack_greedy(rack_df)
+        if compute_rack_profit(greedy_opt) > compute_rack_profit(rack_df):
+            rack_layouts["Greedy"] = greedy_opt
 
         for name, layout_df in rack_layouts.items():
             layout_df.to_csv(RESULTS_DIR / f"rack_layout_{name.lower()}.csv", index=False)
