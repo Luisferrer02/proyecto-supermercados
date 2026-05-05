@@ -374,21 +374,39 @@ def main():
         opt_rack = optimize_rack_profit_mlp(rack_df, profit_mlp, NUM_SHELVES, SHELF_WIDTH_CM,
                                             normalizer=profit_normalizer)
         opt_profit = compute_rack_profit(opt_rack)
+        # Safety check: only use if it improves
+        if opt_profit <= orig_profit:
+            opt_rack = rack_df.copy()
+            opt_profit = orig_profit
         results["ProfitMLP"]["original_profit"] = orig_profit
         results["ProfitMLP"]["optimized_profit"] = opt_profit
         print(f"   [ProfitMLP] Orig: €{orig_profit:.2f} → Opt: €{opt_profit:.2f} (Δ = {opt_profit - orig_profit:+.2f})")
         rack_layouts["ProfitMLP"] = opt_rack
 
+        # MLP (lift-based) optimization
+        from utils.training import optimize_rack_mlp
+        mlp_opt_rack = optimize_rack_mlp(rack_df, mlp, NUM_SHELVES, SHELF_WIDTH_CM, normalizer=normalizer)
+        mlp_opt_profit = compute_rack_profit(mlp_opt_rack)
+        if mlp_opt_profit <= orig_profit:
+            mlp_opt_rack = rack_df.copy()
+            mlp_opt_profit = orig_profit
         results["MLP"]["original_profit"] = orig_profit
-        results["MLP"]["optimized_profit"] = orig_profit
+        results["MLP"]["optimized_profit"] = mlp_opt_profit
+        print(f"   [MLP] Orig: €{orig_profit:.2f} → Opt: €{mlp_opt_profit:.2f} (Δ = {mlp_opt_profit - orig_profit:+.2f})")
+        rack_layouts["MLP"] = mlp_opt_rack
 
         for model_name in ["LSTM", "Transformer"]:
             results[model_name]["original_profit"] = orig_profit
             results[model_name]["optimized_profit"] = orig_profit
+            results[model_name]["_note"] = "Prediction model only (no direct shelf assignment)"
 
     if only is None:
         greedy_rack = optimize_rack_greedy(rack_df)
         greedy_profit = compute_rack_profit(greedy_rack)
+        # Safety check: only use if it improves
+        if greedy_profit <= orig_profit:
+            greedy_rack = rack_df.copy()
+            greedy_profit = orig_profit
         results["Greedy"] = {"original_profit": orig_profit, "optimized_profit": greedy_profit}
         rack_layouts["Greedy"] = greedy_rack
         print(f"   [Greedy] Orig: €{orig_profit:.2f} → Opt: €{greedy_profit:.2f} (Δ = {greedy_profit - orig_profit:+.2f})")
