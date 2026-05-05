@@ -51,6 +51,8 @@ export const api = {
     fetch(`${BASE}/api/predict/accept?month=${month}`, { method: "POST" }).then((r) => r.json()),
   predictDiscard: (month: string) =>
     fetch(`${BASE}/api/predict/discard?month=${month}`, { method: "POST" }).then((r) => r.json()),
+  predictRagMonths: () =>
+    fetch(`${BASE}/api/predict/rag-months`).then((r) => r.json()),
 
   // Optimize — unified upload → ingest → predict flow
   optimizeStatus: () =>

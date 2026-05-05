@@ -61,9 +61,11 @@ export default function PredictPage() {
   const [accepted, setAccepted] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const [pastMonths, setPastMonths] = useState<string[]>([]);
+  const [ragMonths, setRagMonths] = useState<string[]>([]);
 
   useEffect(() => {
     api.predictList().then((d) => setPastMonths(d.months ?? [])).catch(() => {});
+    api.predictRagMonths().then((d) => setRagMonths(d.months ?? [])).catch(() => {});
   }, []);
 
   const startPrediction = () => {
@@ -235,6 +237,14 @@ export default function PredictPage() {
               </div>
             )}
           </div>
+          {ragMonths.length > 0 && (
+            <div className="text-xs text-muted-foreground border-t pt-3 mt-2">
+              <span className="font-medium">Meses en la base de conocimiento:</span>{" "}
+              {ragMonths.map((m) => (
+                <span key={m} className="inline-block bg-muted rounded px-1.5 py-0.5 mr-1 mb-1">{m}</span>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -274,6 +284,7 @@ export default function PredictPage() {
                         if (res.ok) {
                           setAccepted(true);
                           setPastMonths((prev) => [...new Set([...prev, month])].sort());
+                          api.predictRagMonths().then((d) => setRagMonths(d.months ?? [])).catch(() => {});
                         } else {
                           alert(`Error: ${res.error || 'No se pudo aceptar'}`);
                         }

@@ -165,6 +165,24 @@ router.get('/results', (req: Request, res: Response) => {
   res.json({ products, forecast, forecastSource, rackSummary: rackMap, explanations });
 });
 
+// GET /api/predict/rag-months — list months currently in the knowledge base
+router.get('/rag-months', async (_req: Request, res: Response) => {
+  const { execSync } = await import('child_process');
+  const mlopsDir = process.env.MLOPS_DIR!;
+  const { resolveVenvBin } = await import('../services/pythonRunner');
+  const venvBin = resolveVenvBin();
+  const pythonBin = venvBin ? path.join(venvBin, 'python') : 'python3';
+  try {
+    const output = execSync(
+      `${pythonBin} -c "from utils.knowledge_base import ShelfKnowledgeBase; import json; print(json.dumps(ShelfKnowledgeBase().stats()))"`,
+      { cwd: mlopsDir, encoding: 'utf-8', timeout: 10000 }
+    );
+    res.json(JSON.parse(output.trim()));
+  } catch {
+    res.json({ months: [], n_months: 0, total_chunks: 0 });
+  }
+});
+
 // GET /api/predict/list — list all available prediction result months
 router.get('/list', (_req: Request, res: Response) => {
   const resultsDir = process.env.RESULTS_DIR!;
