@@ -364,7 +364,7 @@ def main():
     parser.add_argument("--month", type=str, required=True, help="Target month YYYY-MM (e.g. 2026-01)")
     parser.add_argument("--category", type=str, default=None)
     parser.add_argument("--data-dir", type=str, default=str(MONTHLY_DIR))
-    parser.add_argument("--n-candidates", type=int, default=5)
+    parser.add_argument("--n-candidates", type=int, default=10)
     parser.add_argument("--dry-run", action="store_true", help="Use heuristic forecast instead of LLM")
     args = parser.parse_args()
 
