@@ -36,17 +36,19 @@ from utils.retail_physics import (
     NUM_SHELVES,
     SHELF_WIDTH_CM,
     compute_rack_profit,
+    generate_absolute_profit_data,
     generate_synthetic_training_data,
     optimize_rack_greedy,
 )
 from utils.training import (
     EPOCHS,
     FEATURE_COLS,
+    PROFIT_FEATURE_COLS,
     FeatureNormalizer,
     LR,
     df_to_tensors,
     make_sequences,
-    optimize_rack_mlp,
+    optimize_rack_profit_mlp,
     train_model,
 )
 
@@ -260,6 +262,8 @@ def main():
     parser.add_argument("--sample-size", type=int, default=None)
     parser.add_argument("--epochs", type=int, default=EPOCHS)
     parser.add_argument("--ppo-episodes", type=int, default=500)
+    parser.add_argument("--only", type=str, default=None,
+                        help="Train only a specific model: mlp, profit_mlp, lstm, transformer, ppo")
     args = parser.parse_args()
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -273,93 +277,129 @@ def main():
     holdout_X, holdout_y = df_to_tensors(holdout_df)
 
     # Normalize features for MLP (fit on train, apply to all)
-    normalizer = FeatureNormalizer().fit(train_X)
+    normalizer = FeatureNormalizer()
     train_X_norm = normalizer.fit_transform(train_X)
     test_X_norm = normalizer.transform(test_X)
     val_X_norm = normalizer.transform(val_X)
     holdout_X_norm = normalizer.transform(holdout_X)
 
     results = {}
+    only = args.only.lower() if args.only else None
 
-    print("\n Training MLP (normalized, 400 epochs) …")
-    mlp_epochs = max(args.epochs, 400)
-    results["MLP"], mlp = _train_flat(
-        "MLP", build_mlp(input_dim=input_dim),
-        train_X_norm, train_y, test_X_norm, test_y, val_X_norm, val_y, holdout_X_norm, holdout_y,
-        mlp_epochs,
-    )
+    if only in (None, "mlp"):
+        print("\n Training MLP (normalized, 400 epochs) …")
+        mlp_epochs = max(args.epochs, 400)
+        results["MLP"], mlp = _train_flat(
+            "MLP", build_mlp(input_dim=input_dim),
+            train_X_norm, train_y, test_X_norm, test_y, val_X_norm, val_y, holdout_X_norm, holdout_y,
+            mlp_epochs,
+        )
+        torch.save({"mean": normalizer.mean, "std": normalizer.std}, RESULTS_DIR / "normalizer.pth")
 
-    # Save normalizer so 05_predict.py can apply the same transform
-    torch.save({"mean": normalizer.mean, "std": normalizer.std}, RESULTS_DIR / "normalizer.pth")
+    if only in (None, "profit_mlp"):
+        print("\n Training Profit MLP (for shelf optimization) …")
+        profit_data = generate_absolute_profit_data(df)
+        # Shuffle before splitting to avoid rack-order bias
+        profit_data = profit_data.sample(frac=1, random_state=42).reset_index(drop=True)
+        n_profit = len(profit_data)
+        n_profit_test = round(n_profit * 0.15)
+        profit_test = profit_data.iloc[:n_profit_test]
+        profit_train = profit_data.iloc[n_profit_test:]
 
-    print("\n Training LSTM …")
-    results["LSTM"], lstm = _train_seq(
-        "LSTM", build_lstm(input_dim=input_dim),
-        train_df, test_df, val_df, holdout_df, args.epochs,
-    )
+        profit_input_dim = len(PROFIT_FEATURE_COLS)
+        profit_train_X = torch.FloatTensor(profit_train[PROFIT_FEATURE_COLS].to_numpy().copy())
+        profit_train_y = torch.FloatTensor(profit_train["profit"].to_numpy().copy())
+        profit_test_X = torch.FloatTensor(profit_test[PROFIT_FEATURE_COLS].to_numpy().copy())
+        profit_test_y = torch.FloatTensor(profit_test["profit"].to_numpy().copy())
 
-    print("\n Training Transformer (normalized, 300 epochs) …")
-    results["Transformer"], transformer = _train_seq(
-        "Transformer", build_transformer(input_dim=input_dim),
-        train_df, test_df, val_df, holdout_df, epochs=300, lr=1e-4, clip_grad=1.0,
-        normalizer=normalizer,
-    )
+        profit_normalizer = FeatureNormalizer().fit(profit_train_X)
+        profit_train_X_norm = profit_normalizer.transform(profit_train_X)
+        profit_test_X_norm = profit_normalizer.transform(profit_test_X)
 
-    # Prediction baselines
-    identity_mse = float(torch.mean(test_y ** 2).item())
-    random_mse = float(torch.mean((torch.randn_like(test_y) * float(test_y.std()) - test_y) ** 2).item())
-    print(f"\n Prediction baselines on test set ({test_y.numel()} samples):")
-    print(f"   [Identity] Predicts 0 → MSE: {identity_mse:.2f} €²  | RMSE: {identity_mse ** 0.5:.2f} €")
-    print(f"   [Random]   Gaussian    → MSE: {random_mse:.2f} €²  | RMSE: {random_mse ** 0.5:.2f} €")
-    results["_baseline_identity_prediction"] = {
-        "mse_eur2": identity_mse, "rmse_eur": identity_mse ** 0.5,
-        "description": "Predicts profit_lift=0 for every sample (no-model baseline)",
-    }
-    results["_baseline_random_prediction"] = {
-        "mse_eur2": random_mse, "rmse_eur": random_mse ** 0.5,
-        "description": "Gaussian noise with same std as target (noise-floor baseline)",
-    }
+        profit_mlp = build_mlp(input_dim=profit_input_dim)
+        profit_metrics = train_model(profit_mlp, profit_train_X_norm, profit_train_y,
+                                      profit_test_X_norm, profit_test_y,
+                                      name="ProfitMLP", epochs=400, batch_size=4096)
+        save_model(profit_mlp, "profit_mlp", RESULTS_DIR,
+                   metadata={"origin": "02_train_models.py", "epochs": 400, **profit_metrics})
+        torch.save({"mean": profit_normalizer.mean, "std": profit_normalizer.std},
+                   RESULTS_DIR / "profit_normalizer.pth")
+        results["ProfitMLP"] = profit_metrics
 
-    print("\n Training PPO …")
-    ppo_results = train_ppo(df, n_episodes=args.ppo_episodes)
-    results["PPO"] = {
-        "original_profit": ppo_results["original_profit"],
-        "optimized_profit": ppo_results["optimized_profit"],
-    }
+    if only in (None, "lstm"):
+        print("\n Training LSTM …")
+        results["LSTM"], lstm = _train_seq(
+            "LSTM", build_lstm(input_dim=input_dim),
+            train_df, test_df, val_df, holdout_df, args.epochs,
+        )
 
-    print("\n Computing model-guided optimizations …")
-    rack_df = df[df["rack_id"] == ppo_results["rack_id"]].head(40).copy()
-    orig_profit = compute_rack_profit(rack_df)
-    rack_layouts = {"Original": rack_df.copy()}
+    if only in (None, "transformer"):
+        print("\n Training Transformer (normalized, 300 epochs) …")
+        results["Transformer"], transformer = _train_seq(
+            "Transformer", build_transformer(input_dim=input_dim),
+            train_df, test_df, val_df, holdout_df, epochs=300, lr=1e-4, clip_grad=1.0,
+            normalizer=normalizer,
+        )
 
-    for model_name, model in [("MLP", mlp)]:
-        opt_rack = optimize_rack_mlp(rack_df, model, NUM_SHELVES, SHELF_WIDTH_CM, normalizer=normalizer)
+    if only is None:
+        identity_mse = float(torch.mean(test_y ** 2).item())
+        random_mse = float(torch.mean((torch.randn_like(test_y) * float(test_y.std()) - test_y) ** 2).item())
+        print(f"\n Prediction baselines on test set ({test_y.numel()} samples):")
+        print(f"   [Identity] Predicts 0 → MSE: {identity_mse:.2f} €²  | RMSE: {identity_mse ** 0.5:.2f} €")
+        print(f"   [Random]   Gaussian    → MSE: {random_mse:.2f} €²  | RMSE: {random_mse ** 0.5:.2f} €")
+        results["_baseline_identity_prediction"] = {
+            "mse_eur2": identity_mse, "rmse_eur": identity_mse ** 0.5,
+            "description": "Predicts profit_lift=0 for every sample (no-model baseline)",
+        }
+        results["_baseline_random_prediction"] = {
+            "mse_eur2": random_mse, "rmse_eur": random_mse ** 0.5,
+            "description": "Gaussian noise with same std as target (noise-floor baseline)",
+        }
+
+
+    if only in (None, "ppo"):
+        print("\n Training PPO …")
+        ppo_results = train_ppo(df, n_episodes=args.ppo_episodes)
+        results["PPO"] = {
+            "original_profit": ppo_results["original_profit"],
+            "optimized_profit": ppo_results["optimized_profit"],
+        }
+
+    if only is None:
+        print("\n Computing model-guided optimizations …")
+        rack_df = df[df["rack_id"] == ppo_results["rack_id"]].head(40).copy()
+        orig_profit = compute_rack_profit(rack_df)
+        rack_layouts = {"Original": rack_df.copy()}
+
+        opt_rack = optimize_rack_profit_mlp(rack_df, profit_mlp, NUM_SHELVES, SHELF_WIDTH_CM,
+                                            normalizer=profit_normalizer)
         opt_profit = compute_rack_profit(opt_rack)
-        results[model_name]["original_profit"] = orig_profit
-        results[model_name]["optimized_profit"] = opt_profit
-        print(f"   [{model_name}] Orig: €{orig_profit:.2f} → Opt: €{opt_profit:.2f} (Δ = {opt_profit - orig_profit:+.2f})")
-        rack_layouts[model_name] = opt_rack
+        results["ProfitMLP"]["original_profit"] = orig_profit
+        results["ProfitMLP"]["optimized_profit"] = opt_profit
+        print(f"   [ProfitMLP] Orig: €{orig_profit:.2f} → Opt: €{opt_profit:.2f} (Δ = {opt_profit - orig_profit:+.2f})")
+        rack_layouts["ProfitMLP"] = opt_rack
 
-    # LSTM and Transformer are sequence models — they score full layouts
-    # but don't do per-product greedy assignment. Their optimization value
-    # comes from the ensemble in 05_predict.py (MLP proposes, Transformer scores).
-    for model_name in ["LSTM", "Transformer"]:
-        results[model_name]["original_profit"] = orig_profit
-        results[model_name]["optimized_profit"] = orig_profit
+        results["MLP"]["original_profit"] = orig_profit
+        results["MLP"]["optimized_profit"] = orig_profit
 
-    greedy_rack = optimize_rack_greedy(rack_df)
-    greedy_profit = compute_rack_profit(greedy_rack)
-    results["Greedy"] = {"original_profit": orig_profit, "optimized_profit": greedy_profit}
-    rack_layouts["Greedy"] = greedy_rack
-    print(f"   [Greedy] Orig: €{orig_profit:.2f} → Opt: €{greedy_profit:.2f} (Δ = {greedy_profit - orig_profit:+.2f})")
+        for model_name in ["LSTM", "Transformer"]:
+            results[model_name]["original_profit"] = orig_profit
+            results[model_name]["optimized_profit"] = orig_profit
+
+    if only is None:
+        greedy_rack = optimize_rack_greedy(rack_df)
+        greedy_profit = compute_rack_profit(greedy_rack)
+        results["Greedy"] = {"original_profit": orig_profit, "optimized_profit": greedy_profit}
+        rack_layouts["Greedy"] = greedy_rack
+        print(f"   [Greedy] Orig: €{orig_profit:.2f} → Opt: €{greedy_profit:.2f} (Δ = {greedy_profit - orig_profit:+.2f})")
+
+        for name, layout_df in rack_layouts.items():
+            layout_df.to_csv(RESULTS_DIR / f"rack_layout_{name.lower()}.csv", index=False)
 
     results_file = RESULTS_DIR / "training_results.json"
     with open(results_file, "w") as f:
         json.dump(results, f, indent=2, default=str)
     print(f"\n Results saved to {results_file}")
-
-    for name, layout_df in rack_layouts.items():
-        layout_df.to_csv(RESULTS_DIR / f"rack_layout_{name.lower()}.csv", index=False)
 
     print("\n" + "=" * 88)
     print(f"{'Model':<15} {'MSE (€²)':>12} {'RMSE (€)':>10} {'Orig (€)':>14} {'Opt (€)':>14} {'Lift (€)':>12}")

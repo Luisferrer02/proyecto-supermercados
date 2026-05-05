@@ -132,8 +132,16 @@ def run_training_thread(csv_dir: Path, tracker: ProgressTracker, epochs: int = E
             return
 
         tracker.update_training("running", "Generating training samples...")
-        train_df = generate_synthetic_training_data(df, n_samples=max(20000, len(df) * 3), seed=42)
-        test_df  = generate_synthetic_training_data(df, n_samples=max(3000, len(df)), seed=99)
+        # Rack-level split to prevent data leakage
+        rng = np.random.default_rng(42)
+        all_racks = np.sort(df["rack_id"].unique())
+        n_test_racks = max(1, round(len(all_racks) * 0.2))
+        test_racks = set(rng.choice(all_racks, size=n_test_racks, replace=False).tolist())
+        train_source = df[~df["rack_id"].isin(test_racks)]
+        test_source = df[df["rack_id"].isin(test_racks)]
+
+        train_df = generate_synthetic_training_data(train_source, n_samples=max(20000, len(train_source) * 3), seed=42)
+        test_df  = generate_synthetic_training_data(test_source, n_samples=max(3000, len(test_source)), seed=99)
         tracker.update_training("running", f"Train: {len(train_df)}, Test: {len(test_df)} samples")
 
         if len(train_df) < 100:
