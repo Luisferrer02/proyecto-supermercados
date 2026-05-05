@@ -434,6 +434,22 @@ def main():
     save_results(base_df, optimized_df, target_year, target_month, multipliers,
                  forecast_source=forecast_source, forecasted_df=forecasted_df)
 
+    # Step 6: Save optimized month into data/monthly/ and ingest into RAG
+    # so the next month's prediction can use this month as context.
+    print("\n  Step 6: Adding optimized month to knowledge base...")
+    month_name_lower = MONTH_NAMES[target_month].lower()
+    monthly_csv = MONTHLY_DIR / f"sales_{target_year}_{target_month:02d}_{month_name_lower}.csv"
+    MONTHLY_DIR.mkdir(parents=True, exist_ok=True)
+    optimized_df.to_csv(monthly_csv, index=False)
+    print(f"   Saved → {monthly_csv}")
+
+    try:
+        kb = ShelfKnowledgeBase()
+        n_chunks = kb.ingest_csv(monthly_csv)
+        print(f"   Ingested into RAG: {n_chunks} category summaries")
+    except Exception as exc:
+        print(f"   ⚠ Could not ingest into RAG: {exc}")
+
     print("\n  Done! Check results/ for output files.")
 
 
