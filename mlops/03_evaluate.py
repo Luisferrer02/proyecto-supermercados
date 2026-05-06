@@ -139,7 +139,12 @@ def visualize_rack(df: pd.DataFrame, rack_id: int | None = None):
     category = rack_df["Category"].iloc[0] if "Category" in rack_df.columns else f"Rack {rack_id}"
 
     orig_profits = _profit_by_shelf(rack_df)
-    opt_profits = _profit_by_shelf(optimize_rack_greedy(rack_df))
+    greedy_df = optimize_rack_greedy(rack_df)
+    # Only show optimized if it actually improves
+    if compute_rack_profit(greedy_df) > compute_rack_profit(rack_df):
+        opt_profits = _profit_by_shelf(greedy_df)
+    else:
+        opt_profits = orig_profits
 
     fig, axes = plt.subplots(1, 2, figsize=(16, 8), sharey=True)
     fig.suptitle(f"Shelf Profit Distribution — Category: {category}",

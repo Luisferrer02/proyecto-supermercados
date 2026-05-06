@@ -222,7 +222,7 @@ function aggregate(
   optimized.forEach(o => {
     total += 1;
     const orig = origByName.get(o.name);
-    const origShelf = orig ? parseInt(orig.shelf_level || '1', 10) : parseInt(o.shelf_level || '1', 10);
+    const origShelf = parseInt(o.original_shelf_level || (orig ? orig.shelf_level : o.shelf_level) || '1', 10);
     const newShelf = parseInt(o.shelf_level || '1', 10) || 1;
     const from = Math.max(1, Math.min(7, origShelf));
     const to = Math.max(1, Math.min(7, newShelf));
@@ -230,7 +230,7 @@ function aggregate(
     matrix[key] = (matrix[key] || 0) + 1;
     if (from !== to) moved += 1;
 
-    const oProfit = orig ? productProfit({ ...orig }) : productProfit({ ...o, shelf_level: String(origShelf) });
+    const oProfit = productProfit({ ...o, shelf_level: String(origShelf) });
     const nProfit = productProfit(o);
     totalOrig += oProfit;
     totalOpt += nProfit;
